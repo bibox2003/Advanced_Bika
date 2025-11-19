@@ -362,3 +362,79 @@ class FAQ(models.Model):
     
     def __str__(self):
         return self.question
+    
+class Wishlist(models.Model):
+    """User wishlist model"""
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    added_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['user', 'product']
+        ordering = ['-added_at']
+    
+    def __str__(self):
+        return f"{self.user.username}'s wishlist - {self.product.name}"
+
+class Cart(models.Model):
+    """Shopping cart model"""
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+    added_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['user', 'product']
+        ordering = ['-added_at']
+    
+    def __str__(self):
+        return f"{self.user.username}'s cart - {self.product.name}"
+    
+    @property
+    def total_price(self):
+        return self.product.price * self.quantity
+
+class Order(models.Model):
+    """Order model"""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('confirmed', 'Confirmed'),
+        ('shipped', 'Shipped'),
+        ('delivered', 'Delivered'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    order_number = models.CharField(max_length=20, unique=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    shipping_address = models.TextField()
+    billing_address = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Order #{self.order_number} - {self.user.username}"
+    
+    def save(self, *args, **kwargs):
+        if not self.order_number:
+            self.order_number = f"ORD{timezone.now().strftime('%Y%m%d')}{self.id or ''}"
+        super().save(*args, **kwargs)
+
+class OrderItem(models.Model):
+    """Order items model"""
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    def __str__(self):
+        return f"{self.product.name} - {self.order.order_number}"
+    
+    @property
+    def total_price(self):
+        return self.price * self.quantity    

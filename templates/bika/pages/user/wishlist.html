@@ -1,0 +1,225 @@
+{% extends 'bika/base.html' %}
+{% load static %}
+
+{% block title %}My Wishlist - Bika{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            {% include 'bika/partials/user_sidebar.html' %}
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-heart me-2"></i>My Wishlist</h4>
+                    <span class="badge bg-light text-primary">{{ wishlist_items.count }} items</span>
+                </div>
+                <div class="card-body">
+                    {% if wishlist_items %}
+                    <div class="row">
+                        {% for item in wishlist_items %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card product-card h-100">
+                                <div class="product-image position-relative">
+                                    {% if item.product.images.first %}
+                                    <img src="{{ item.product.images.first.image.url }}" 
+                                         class="card-img-top" alt="{{ item.product.name }}"
+                                         style="height: 200px; object-fit: cover;">
+                                    {% else %}
+                                    <div class="bg-light d-flex align-items-center justify-content-center" 
+                                         style="height: 200px;">
+                                        <i class="fas fa-image fa-3x text-muted"></i>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- Wishlist Remove Button -->
+                                    <button class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 remove-wishlist" 
+                                            data-product-id="{{ item.product.id }}" 
+                                            title="Remove from wishlist">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    
+                                    <!-- Product Badges -->
+                                    <div class="position-absolute top-0 start-0 m-2">
+                                        {% if item.product.is_featured %}
+                                        <span class="badge bg-warning">Featured</span>
+                                        {% endif %}
+                                        {% if item.product.discount_percentage > 0 %}
+                                        <span class="badge bg-danger">{{ item.product.discount_percentage }}% OFF</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <a href="{% url 'bika:product_detail' item.product.slug %}" class="text-decoration-none">
+                                            {{ item.product.name }}
+                                        </a>
+                                    </h6>
+                                    <p class="card-text small text-muted">
+                                        {{ item.product.short_description|truncatewords:10 }}
+                                    </p>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="product-price">
+                                            <span class="h5 text-primary">${{ item.product.price }}</span>
+                                            {% if item.product.compare_price %}
+                                            <small class="text-muted text-decoration-line-through ms-2">
+                                                ${{ item.product.compare_price }}
+                                            </small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="vendor-info small text-muted mb-3">
+                                        <i class="fas fa-store me-1"></i>
+                                        {{ item.product.vendor.business_name|default:item.product.vendor.username }}
+                                    </div>
+                                    
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-primary btn-sm add-to-cart" 
+                                                data-product-id="{{ item.product.id }}">
+                                            <i class="fas fa-shopping-cart me-1"></i>Add to Cart
+                                        </button>
+                                        <a href="{% url 'bika:product_detail' item.product.slug %}" 
+                                           class="btn btn-outline-secondary btn-sm">
+                                            View Details
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-heart fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">Your wishlist is empty</h4>
+                        <p class="text-muted mb-4">Start adding products you love to your wishlist!</p>
+                        <a href="{% url 'bika:product_list' %}" class="btn btn-primary">
+                            <i class="fas fa-shopping-bag me-2"></i>Explore Products
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.product-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+}
+
+.remove-wishlist {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.add-to-cart {
+    border-radius: 8px;
+    font-weight: 600;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Remove from wishlist
+    document.querySelectorAll('.remove-wishlist').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            const card = this.closest('.col-md-6');
+            
+            fetch(`/wishlist/remove/${productId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    card.remove();
+                    // Update wishlist count in sidebar
+                    const wishlistBadge = document.querySelector('.list-group-item[href*="wishlist"] .badge');
+                    if (wishlistBadge) {
+                        wishlistBadge.textContent = data.wishlist_count;
+                    }
+                    
+                    // Show toast notification
+                    showToast(data.message, 'success');
+                }
+            });
+        });
+    });
+    
+    // Add to cart from wishlist
+    document.querySelectorAll('.add-to-cart').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            
+            fetch(`/cart/add/${productId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: new URLSearchParams({
+                    'quantity': '1'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update cart count in header
+                    const cartBadge = document.querySelector('.fa-shopping-cart').parentElement.querySelector('.badge');
+                    if (cartBadge) {
+                        cartBadge.textContent = data.cart_count;
+                    }
+                    
+                    showToast(data.message, 'success');
+                }
+            });
+        });
+    });
+    
+    function showToast(message, type) {
+        // Create and show toast notification
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed top-0 end-0 m-3`;
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+});
+</script>
+{% endblock %}

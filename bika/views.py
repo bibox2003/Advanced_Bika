@@ -3,30 +3,26 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Count
-import django
-import sys
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from django.core.mail import send_mail
 from django.conf import settings
 from django.views.generic import ListView, DetailView, TemplateView
-
 from .models import SiteInfo, Service, Testimonial, ContactMessage, FAQ
 from .forms import ContactForm, NewsletterForm
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from django.contrib.auth import login, authenticate
-from django.contrib.auth.decorators import login_required
-from django.core.mail import send_mail
-from django.conf import settings
 from django.views.generic import ListView, DetailView, TemplateView
 from django.db.models import Count, Q
-from django.utils import timezone
-from datetime import timedelta
 import django
 import sys
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from .models import Product, Wishlist, Cart, Order, OrderItem
 
 # Import ALL your models
 from .models import (
@@ -458,3 +454,200 @@ def register_view(request):
         form = CustomUserCreationForm()
     
     return render(request, 'bika/pages/registration/register.html', {'form': form})
+
+@login_required
+def user_profile(request):
+    """User profile page"""
+    user = request.user
+    recent_orders = Order.objects.filter(user=user).order_by('-created_at')[:5]
+    
+    context = {
+        'user': user,
+        'recent_orders': recent_orders,
+    }
+    return render(request, 'bika/pages/user/profile.html', context)
+
+@login_required
+def update_profile(request):
+    """Update user profile"""
+    if request.method == 'POST':
+        user = request.user
+        user.first_name = request.POST.get('first_name', user.first_name)
+        user.last_name = request.POST.get('last_name', user.last_name)
+        user.email = request.POST.get('email', user.email)
+        user.phone = request.POST.get('phone', user.phone)
+        user.address = request.POST.get('address', user.address)
+        
+        if 'profile_picture' in request.FILES:
+            user.profile_picture = request.FILES['profile_picture']
+        
+        user.save()
+        messages.success(request, 'Profile updated successfully!')
+        return redirect('bika:user_profile')
+    
+    return redirect('bika:user_profile')
+
+@login_required
+def user_orders(request):
+    """User orders page"""
+    orders = Order.objects.filter(user=request.user).order_by('-created_at')
+    
+    context = {
+        'orders': orders,
+    }
+    return render(request, 'bika/pages/user/orders.html', context)
+
+@login_required
+def order_detail(request, order_id):
+    """Order detail page"""
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    
+    context = {
+        'order': order,
+    }
+    return render(request, 'bika/pages/user/order_detail.html', context)
+
+@login_required
+def wishlist(request):
+    """User wishlist page"""
+    wishlist_items = Wishlist.objects.filter(user=request.user).select_related('product')
+    
+    context = {
+        'wishlist_items': wishlist_items,
+    }
+    return render(request, 'bika/pages/user/wishlist.html', context)
+
+@login_required
+def add_to_wishlist(request, product_id):
+    """Add product to wishlist"""
+    product = get_object_or_404(Product, id=product_id)
+    wishlist_item, created = Wishlist.objects.get_or_create(
+        user=request.user,
+        product=product
+    )
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True,
+            'message': 'Product added to wishlist!',
+            'wishlist_count': Wishlist.objects.filter(user=request.user).count()
+        })
+    
+    messages.success(request, 'Product added to wishlist!')
+    return redirect('bika:wishlist')
+
+@login_required
+def remove_from_wishlist(request, product_id):
+    """Remove product from wishlist"""
+    product = get_object_or_404(Product, id=product_id)
+    Wishlist.objects.filter(user=request.user, product=product).delete()
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True,
+            'message': 'Product removed from wishlist!',
+            'wishlist_count': Wishlist.objects.filter(user=request.user).count()
+        })
+    
+    messages.success(request, 'Product removed from wishlist!')
+    return redirect('bika:wishlist')
+
+@login_required
+def cart(request):
+    """Shopping cart page"""
+    cart_items = Cart.objects.filter(user=request.user).select_related('product')
+    total_price = sum(item.total_price for item in cart_items)
+    
+    context = {
+        'cart_items': cart_items,
+        'total_price': total_price,
+    }
+    return render(request, 'bika/pages/user/cart.html', context)
+
+@login_required
+def add_to_cart(request, product_id):
+    """Add product to cart"""
+    product = get_object_or_404(Product, id=product_id)
+    quantity = int(request.POST.get('quantity', 1))
+    
+    cart_item, created = Cart.objects.get_or_create(
+        user=request.user,
+        product=product,
+        defaults={'quantity': quantity}
+    )
+    
+    if not created:
+        cart_item.quantity += quantity
+        cart_item.save()
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        cart_count = Cart.objects.filter(user=request.user).count()
+        return JsonResponse({
+            'success': True,
+            'message': 'Product added to cart!',
+            'cart_count': cart_count
+        })
+    
+    messages.success(request, 'Product added to cart!')
+    return redirect('bika:cart')
+
+@login_required
+def update_cart(request, product_id):
+    """Update cart item quantity"""
+    product = get_object_or_404(Product, id=product_id)
+    quantity = int(request.POST.get('quantity', 1))
+    
+    if quantity > 0:
+        cart_item = get_object_or_404(Cart, user=request.user, product=product)
+        cart_item.quantity = quantity
+        cart_item.save()
+    else:
+        Cart.objects.filter(user=request.user, product=product).delete()
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        cart_items = Cart.objects.filter(user=request.user)
+        total_price = sum(item.total_price for item in cart_items)
+        return JsonResponse({
+            'success': True,
+            'total_price': total_price,
+            'item_total': cart_item.total_price if quantity > 0 else 0
+        })
+    
+    return redirect('bika:cart')
+
+@login_required
+def remove_from_cart(request, product_id):
+    """Remove product from cart"""
+    product = get_object_or_404(Product, id=product_id)
+    Cart.objects.filter(user=request.user, product=product).delete()
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        cart_items = Cart.objects.filter(user=request.user)
+        total_price = sum(item.total_price for item in cart_items)
+        return JsonResponse({
+            'success': True,
+            'total_price': total_price,
+            'cart_count': cart_items.count()
+        })
+    
+    messages.success(request, 'Product removed from cart!')
+    return redirect('bika:cart')
+
+@login_required
+def user_settings(request):
+    """User settings page"""
+    if request.method == 'POST':
+        # Handle settings update
+        user = request.user
+        user.email_notifications = request.POST.get('email_notifications') == 'on'
+        user.sms_notifications = request.POST.get('sms_notifications') == 'on'
+        user.newsletter_subscription = request.POST.get('newsletter_subscription') == 'on'
+        user.save()
+        
+        messages.success(request, 'Settings updated successfully!')
+        return redirect('bika:user_settings')
+    
+    context = {
+        'user': request.user,
+    }
+    return render(request, 'bika/pages/user/settings.html', context)

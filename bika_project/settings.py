@@ -30,8 +30,7 @@ INSTALLED_APPS = [
     
     # Local apps
     'bika',
-    'users',
-    'products',
+
 ]
 
 # Crispy Forms configuration - USING BOOTSTRAP4 (more stable)

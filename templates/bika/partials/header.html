@@ -1,6 +1,7 @@
 {% load static %}
 
 <!-- Header -->
+<!-- Header -->
 <header>
     <!-- Top Bar -->
     <div class="top-bar bg-dark text-light py-2">
@@ -120,7 +121,7 @@
                             <li><hr class="dropdown-divider"></li>
                             {% for service in featured_services|slice:":6" %}
                             <li>
-                                <a class="dropdown-item service-item" href="{{ service.get_absolute_url }}">
+                                <a class="dropdown-item service-item" href="{% url 'bika:service_detail' service.slug %}">
                                     <div class="service-dropdown-content">
                                         <i class="{{ service.icon }} me-3 text-primary"></i>
                                         <div>
@@ -173,11 +174,13 @@
                     </button>
 
                     <!-- Cart Icon -->
-                    <a href="#" class="btn btn-outline-secondary btn-sm me-2 position-relative" title="Shopping Cart">
+                    <a href="{% url 'bika:cart' %}" class="btn btn-outline-secondary btn-sm me-2 position-relative" title="Shopping Cart">
                         <i class="fas fa-shopping-cart"></i>
+                        {% if cart_count and cart_count > 0 %}
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            0
+                            {{ cart_count }}
                         </span>
+                        {% endif %}
                     </a>
 
                     <!-- User Menu -->
@@ -247,17 +250,17 @@
 
                             <!-- Common User Options -->
                             <li>
-                                <a class="dropdown-item" href="#">
+                                <a class="dropdown-item" href="{% url 'bika:user_profile' %}">
                                     <i class="fas fa-user me-2 text-info"></i>My Profile
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item" href="#">
+                                <a class="dropdown-item" href="{% url 'bika:user_orders' %}">
                                     <i class="fas fa-shopping-cart me-2 text-secondary"></i>My Orders
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item" href="#">
+                                <a class="dropdown-item" href="{% url 'bika:wishlist' %}">
                                     <i class="fas fa-heart me-2 text-danger"></i>Wishlist
                                 </a>
                             </li>
@@ -265,7 +268,7 @@
 
                             <!-- Settings -->
                             <li>
-                                <a class="dropdown-item" href="#">
+                                <a class="dropdown-item" href="{% url 'bika:user_settings' %}">
                                     <i class="fas fa-cog me-2 text-muted"></i>Settings
                                 </a>
                             </li>
@@ -280,7 +283,7 @@
                             <!-- Admin Logout (only for staff) -->
                             {% if user.is_staff %}
                             <li>
-                                <a class="dropdown-item text-warning" href="{% url 'bika:admin_logout' %}">
+                                <a class="dropdown-item text-warning" href="{% url 'admin:logout' %}">
                                     <i class="fas fa-lock me-2"></i>Admin Logout
                                 </a>
                             </li>
@@ -337,6 +340,7 @@
         </div>
     </div>
 </header>
+
 
 <style>
 /* Top Bar Styles */

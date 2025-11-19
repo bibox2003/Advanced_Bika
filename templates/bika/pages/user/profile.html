@@ -1,0 +1,433 @@
+{% extends 'bika/base.html' %}
+{% load static %}
+
+{% block title %}My Profile - Bika{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            {% include 'bika/partials/user_sidebar.html' %}
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-user me-2"></i>My Profile</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Profile Header -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center">
+                                <div class="position-relative">
+                                    {% if user.profile_picture %}
+                                    <img src="{{ user.profile_picture.url }}" 
+                                         alt="{{ user.get_full_name }}" 
+                                         class="rounded-circle me-4"
+                                         style="width: 100px; height: 100px; object-fit: cover;">
+                                    {% else %}
+                                    <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-4"
+                                         style="width: 100px; height: 100px;">
+                                        <i class="fas fa-user text-white fa-2x"></i>
+                                    </div>
+                                    {% endif %}
+                                    <button class="btn btn-sm btn-outline-primary position-absolute bottom-0 end-0"
+                                            style="transform: translate(25%, 25%);"
+                                            data-bs-toggle="modal" data-bs-target="#profilePictureModal">
+                                        <i class="fas fa-camera"></i>
+                                    </button>
+                                </div>
+                                <div>
+                                    <h3 class="mb-1">{{ user.get_full_name|default:user.username }}</h3>
+                                    <p class="text-muted mb-2">{{ user.email }}</p>
+                                    <div class="d-flex gap-2">
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-star me-1"></i>Member since {{ user.date_joined|date:"M Y" }}
+                                        </span>
+                                        {% if user.is_verified %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-check-circle me-1"></i>Verified
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <div class="mt-3 mt-md-0">
+                                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                                    <i class="fas fa-edit me-2"></i>Edit Profile
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Profile Stats -->
+                    <div class="row mb-5">
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="card bg-light border-0 text-center">
+                                <div class="card-body">
+                                    <h3 class="text-primary mb-1">{{ orders_count|default:0 }}</h3>
+                                    <small class="text-muted">Total Orders</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="card bg-light border-0 text-center">
+                                <div class="card-body">
+                                    <h3 class="text-primary mb-1">{{ wishlist_count|default:0 }}</h3>
+                                    <small class="text-muted">Wishlist Items</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="card bg-light border-0 text-center">
+                                <div class="card-body">
+                                    <h3 class="text-primary mb-1">{{ reviews_count|default:0 }}</h3>
+                                    <small class="text-muted">Reviews</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="card bg-light border-0 text-center">
+                                <div class="card-body">
+                                    <h3 class="text-primary mb-1">{{ addresses_count|default:0 }}</h3>
+                                    <small class="text-muted">Addresses</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Personal Information -->
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-user-circle me-2 text-primary"></i>Personal Information</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-sm-4">
+                                            <strong>Full Name</strong>
+                                        </div>
+                                        <div class="col-sm-8">
+                                            {{ user.get_full_name|default:"Not set" }}
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-sm-4">
+                                            <strong>Email</strong>
+                                        </div>
+                                        <div class="col-sm-8">
+                                            {{ user.email }}
+                                            {% if user.is_verified %}
+                                            <span class="badge bg-success ms-2">Verified</span>
+                                            {% else %}
+                                            <span class="badge bg-warning ms-2">Unverified</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-sm-4">
+                                            <strong>Phone</strong>
+                                        </div>
+                                        <div class="col-sm-8">
+                                            {{ user.phone_number|default:"Not set" }}
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-4">
+                                            <strong>Date of Birth</strong>
+                                        </div>
+                                        <div class="col-sm-8">
+                                            {{ user.date_of_birth|default:"Not set" }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Account Information -->
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-info-circle me-2 text-info"></i>Account Information</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-sm-5">
+                                            <strong>Username</strong>
+                                        </div>
+                                        <div class="col-sm-7">
+                                            {{ user.username }}
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-sm-5">
+                                            <strong>Member Since</strong>
+                                        </div>
+                                        <div class="col-sm-7">
+                                            {{ user.date_joined|date:"F d, Y" }}
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-sm-5">
+                                            <strong>Last Login</strong>
+                                        </div>
+                                        <div class="col-sm-7">
+                                            {{ user.last_login|date:"F d, Y g:i A"|default:"Never" }}
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-5">
+                                            <strong>Account Status</strong>
+                                        </div>
+                                        <div class="col-sm-7">
+                                            {% if user.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                            <span class="badge bg-danger">Inactive</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="fas fa-history me-2 text-warning"></i>Recent Activity</h6>
+                            <a href="{% url 'bika:user_orders' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                        </div>
+                        <div class="card-body">
+                            {% if recent_orders %}
+                            <div class="table-responsive">
+                                <table class="table table-borderless">
+                                    <thead>
+                                        <tr>
+                                            <th>Order #</th>
+                                            <th>Date</th>
+                                            <th>Items</th>
+                                            <th>Total</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for order in recent_orders %}
+                                        <tr>
+                                            <td>
+                                                <a href="{% url 'bika:order_detail' order.id %}" class="text-decoration-none">
+                                                    #{{ order.order_number }}
+                                                </a>
+                                            </td>
+                                            <td>{{ order.created_at|date:"M d, Y" }}</td>
+                                            <td>{{ order.items.count }} items</td>
+                                            <td>${{ order.total_amount }}</td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if order.status == 'delivered' %}bg-success
+                                                    {% elif order.status == 'shipped' %}bg-info
+                                                    {% elif order.status == 'confirmed' %}bg-primary
+                                                    {% else %}bg-warning{% endif %}">
+                                                    {{ order.get_status_display }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-shopping-bag fa-2x text-muted mb-3"></i>
+                                <p class="text-muted mb-0">No recent orders found.</p>
+                                <a href="{% url 'bika:product_list' %}" class="btn btn-primary mt-3">
+                                    Start Shopping
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Profile</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'bika:update_profile' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">First Name</label>
+                            <input type="text" class="form-control" name="first_name" value="{{ user.first_name }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" class="form-control" name="last_name" value="{{ user.last_name }}">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" value="{{ user.email }}" readonly>
+                        <small class="form-text text-muted">Contact support to change your email address.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" class="form-control" name="phone_number" value="{{ user.phone_number|default:'' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date of Birth</label>
+                        <input type="date" class="form-control" name="date_of_birth" value="{{ user.date_of_birth|default:'' }}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Profile Picture Modal -->
+<div class="modal fade" id="profilePictureModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-camera me-2"></i>Update Profile Picture</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'bika:update_profile' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" 
+                             alt="Current Profile Picture" 
+                             class="rounded-circle mb-3"
+                             style="width: 150px; height: 150px; object-fit: cover;">
+                        {% else %}
+                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
+                             style="width: 150px; height: 150px;">
+                            <i class="fas fa-user text-white fa-3x"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Choose New Photo</label>
+                        <input type="file" class="form-control" name="profile_picture" accept="image/*">
+                        <small class="form-text text-muted">Recommended size: 500x500 pixels. Max file size: 2MB.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    {% if user.profile_picture %}
+                    <button type="button" class="btn btn-danger me-auto" id="removeProfilePicture">
+                        <i class="fas fa-trash me-1"></i>Remove Photo
+                    </button>
+                    {% endif %}
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Upload Photo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.profile-stats .card {
+    border-radius: 12px;
+    transition: transform 0.2s ease;
+}
+
+.profile-stats .card:hover {
+    transform: translateY(-2px);
+}
+
+.table th {
+    font-weight: 600;
+    color: #495057;
+    border: none;
+}
+
+.modal-header {
+    border-bottom: none;
+}
+
+.rounded-circle {
+    border: 4px solid #f8f9fa;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Remove profile picture
+    const removeProfilePictureBtn = document.getElementById('removeProfilePicture');
+    if (removeProfilePictureBtn) {
+        removeProfilePictureBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to remove your profile picture?')) {
+                // Since we don't have a specific URL for removing profile picture,
+                // we'll handle this by submitting the form with a special parameter
+                const form = document.querySelector('#profilePictureModal form');
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'remove_profile_picture';
+                hiddenInput.value = 'true';
+                form.appendChild(hiddenInput);
+                form.submit();
+            }
+            // Alternative approach - you might want to create a separate view for this
+            /*
+            fetch('{% url "bika:update_profile" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'remove_profile_picture=true'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+            */
+        });
+    }
+
+    // File input preview
+    const fileInput = document.querySelector('input[name="profile_picture"]');
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.querySelector('#profilePictureModal img') || 
+                               document.querySelector('#profilePictureModal .rounded-circle');
+                    if (img && img.tagName === 'IMG') {
+                        img.src = e.target.result;
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

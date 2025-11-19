@@ -19,7 +19,7 @@ urlpatterns = [
     path('register/', views.register_view, name='register'),
         # Authentication URLs - MAKE SURE THESE EXIST
     path('login/', auth_views.LoginView.as_view(
-        template_name='bika/registration/login.html',
+        template_name='bika/pages/registration/login.html',
         redirect_authenticated_user=True
     ), name='login'),
     
@@ -44,31 +44,45 @@ urlpatterns = [
     # Password Reset URLs
     path('password-reset/', 
          auth_views.PasswordResetView.as_view(
-             template_name='bika/registration/password_reset.html',
-             email_template_name='bika/registration/password_reset_email.html',
-             subject_template_name='bika/registration/password_reset_subject.txt',
+             template_name='bika/pages/registration/password_reset.html',
+             email_template_name='bika/pages/registration/password_reset_email.html',
+             subject_template_name='bika/pages/registration/password_reset_subject.txt',
              success_url='/password-reset/done/'
          ), 
          name='password_reset'),
     
     path('password-reset/done/', 
          auth_views.PasswordResetDoneView.as_view(
-             template_name='bika/registration/password_reset_done.html'
+             template_name='bika/pages/registration/password_reset_done.html'
          ), 
          name='password_reset_done'),
     
     path('password-reset-confirm/<uidb64>/<token>/', 
          auth_views.PasswordResetConfirmView.as_view(
-             template_name='bika/registration/password_reset_confirm.html',
+             template_name='bika/pages/registration/password_reset_confirm.html',
              success_url='/password-reset-complete/'
          ), 
          name='password_reset_confirm'),
     
     path('password-reset-complete/', 
          auth_views.PasswordResetCompleteView.as_view(
-             template_name='bika/registration/password_reset_complete.html'
+             template_name='bika/pages/pregistration/password_reset_complete.html'
          ), 
          name='password_reset_complete'),
+
+    # User Profile URLs
+    path('profile/', views.user_profile, name='user_profile'),
+    path('profile/update/', views.update_profile, name='update_profile'),
+    path('orders/', views.user_orders, name='user_orders'),
+    path('orders/<int:order_id>/', views.order_detail, name='order_detail'),
+    path('wishlist/', views.wishlist, name='wishlist'),
+    path('wishlist/add/<int:product_id>/', views.add_to_wishlist, name='add_to_wishlist'),
+    path('wishlist/remove/<int:product_id>/', views.remove_from_wishlist, name='remove_from_wishlist'),
+    path('cart/', views.cart, name='cart'),
+    path('cart/add/<int:product_id>/', views.add_to_cart, name='add_to_cart'),
+    path('cart/update/<int:product_id>/', views.update_cart, name='update_cart'),
+    path('cart/remove/<int:product_id>/', views.remove_from_cart, name='remove_from_cart'),
+    path('settings/', views.user_settings, name='user_settings'),     
     
     # AJAX/API endpoints
     path('newsletter/subscribe/', views.newsletter_subscribe, name='newsletter_subscribe'),

@@ -1,0 +1,88 @@
+<div class="card shadow-sm mb-4">
+    <div class="card-body text-center py-4">
+        <div class="user-avatar mb-3">
+            {% if user.profile_picture %}
+            <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" 
+                 class="rounded-circle img-fluid" style="width: 80px; height: 80px; object-fit: cover;">
+            {% else %}
+            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center mx-auto" 
+                 style="width: 80px; height: 80px;">
+                <i class="fas fa-user fa-2x text-white"></i>
+            </div>
+            {% endif %}
+        </div>
+        <h5 class="mb-1">{{ user.get_full_name|default:user.username }}</h5>
+        <p class="text-muted small mb-0">
+            {% if user.is_vendor %}
+            <i class="fas fa-store text-success me-1"></i>Vendor
+            {% else %}
+            <i class="fas fa-user text-info me-1"></i>Customer
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+            <a href="{% url 'bika:user_profile' %}" 
+               class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'user_profile' %}active{% endif %}">
+                <i class="fas fa-user me-2"></i>My Profile
+            </a>
+            <a href="{% url 'bika:user_orders' %}" 
+               class="list-group-item list-group-item-action {% if 'orders' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fas fa-shopping-bag me-2"></i>My Orders
+            </a>
+            <a href="{% url 'bika:wishlist' %}" 
+               class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'wishlist' %}active{% endif %}">
+                <i class="fas fa-heart me-2"></i>Wishlist
+                <span class="badge bg-primary float-end">{{ user.wishlist_items.count }}</span>
+            </a>
+            <a href="{% url 'bika:cart' %}" 
+               class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'cart' %}active{% endif %}">
+                <i class="fas fa-shopping-cart me-2"></i>Shopping Cart
+                <span class="badge bg-primary float-end">{{ user.cart_items.count }}</span>
+            </a>
+            <a href="{% url 'bika:user_settings' %}" 
+               class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'user_settings' %}active{% endif %}">
+                <i class="fas fa-cog me-2"></i>Settings
+            </a>
+            {% if user.is_vendor %}
+            <div class="list-group-item bg-light">
+                <small class="text-muted">Vendor Tools</small>
+            </div>
+            <a href="{% url 'bika:vendor_dashboard' %}" class="list-group-item list-group-item-action">
+                <i class="fas fa-tachometer-alt me-2"></i>Vendor Dashboard
+            </a>
+            <a href="{% url 'bika:vendor_add_product' %}" class="list-group-item list-group-item-action">
+                <i class="fas fa-plus me-2"></i>Add Product
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.list-group-item {
+    border: none;
+    padding: 1rem 1.25rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+    transform: translateX(5px);
+}
+
+.list-group-item.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+    color: white;
+}
+
+.list-group-item.active .badge {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    color: white;
+}
+</style>

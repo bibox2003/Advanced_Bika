@@ -1,0 +1,356 @@
+{% extends 'bika/base.html' %}
+{% load static %}
+
+{% block title %}Shopping Cart - Bika{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            {% include 'bika/partials/user_sidebar.html' %}
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Shopping Cart</h4>
+                    <span class="badge bg-light text-primary">{{ cart_items.count }} items</span>
+                </div>
+                <div class="card-body">
+                    {% if cart_items %}
+                    <div class="table-responsive">
+                        <table class="table table-borderless">
+                            <thead class="border-bottom">
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                    <th>Total</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cart_items %}
+                                <tr class="cart-item" data-product-id="{{ item.product.id }}">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if item.product.images.first %}
+                                            <img src="{{ item.product.images.first.image.url }}" 
+                                                 alt="{{ item.product.name }}"
+                                                 class="rounded me-3"
+                                                 style="width: 80px; height: 80px; object-fit: cover;">
+                                            {% else %}
+                                            <div class="bg-light rounded d-flex align-items-center justify-content-center me-3"
+                                                 style="width: 80px; height: 80px;">
+                                                <i class="fas fa-image text-muted"></i>
+                                            </div>
+                                            {% endif %}
+                                            <div>
+                                                <h6 class="mb-1">
+                                                    <a href="{% url 'bika:product_detail' item.product.slug %}" 
+                                                       class="text-decoration-none">
+                                                        {{ item.product.name }}
+                                                    </a>
+                                                </h6>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-store me-1"></i>
+                                                    {{ item.product.vendor.business_name|default:item.product.vendor.username }}
+                                                </small>
+                                                {% if item.product.is_low_stock %}
+                                                <div class="text-warning small">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                                    Only {{ item.product.stock_quantity }} left in stock
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle">
+                                        <div class="product-price">
+                                            <span class="h6 text-primary">${{ item.product.price }}</span>
+                                            {% if item.product.compare_price %}
+                                            <small class="text-muted text-decoration-line-through d-block">
+                                                ${{ item.product.compare_price }}
+                                            </small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="align-middle">
+                                        <div class="quantity-controls d-flex align-items-center">
+                                            <button class="btn btn-outline-secondary btn-sm quantity-decrease" 
+                                                    {% if item.quantity <= 1 %}disabled{% endif %}>
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                            <input type="number" class="form-control form-control-sm quantity-input mx-2 text-center" 
+                                                   value="{{ item.quantity }}" min="1" max="{% if item.product.track_inventory %}{{ item.product.stock_quantity }}{% else %}99{% endif %}" 
+                                                   style="width: 70px;">
+                                            <button class="btn btn-outline-secondary btn-sm quantity-increase"
+                                                    {% if item.product.track_inventory and item.quantity >= item.product.stock_quantity %}disabled{% endif %}>
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle">
+                                        <span class="h6 text-primary item-total">${{ item.total_price }}</span>
+                                    </td>
+                                    <td class="align-middle">
+                                        <button class="btn btn-outline-danger btn-sm remove-from-cart" 
+                                                data-product-id="{{ item.product.id }}"
+                                                title="Remove from cart">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        <button class="btn btn-outline-primary btn-sm mt-1 add-to-wishlist" 
+                                                data-product-id="{{ item.product.id }}"
+                                                title="Add to wishlist">
+                                            <i class="fas fa-heart"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Cart Summary -->
+                    <div class="row mt-4">
+                        <div class="col-md-8">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">Have a coupon code?</h6>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" placeholder="Enter coupon code">
+                                        <button class="btn btn-primary">Apply</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-primary">
+                                <div class="card-body">
+                                    <h6 class="card-title border-bottom pb-2">Order Summary</h6>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Subtotal:</span>
+                                        <span class="cart-subtotal">${{ total_price }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Shipping:</span>
+                                        <span>$5.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Tax:</span>
+                                        <span>${{ total_price|floatformat:2 }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-3 fw-bold border-top pt-2">
+                                        <span>Total:</span>
+                                        <span class="cart-grand-total">${{ total_price|add:5|add:total_price }}</span>
+                                    </div>
+                                    <div class="d-grid">
+                                        <button class="btn btn-primary btn-lg">
+                                            <i class="fas fa-lock me-2"></i>Proceed to Checkout
+                                        </button>
+                                    </div>
+                                    <div class="text-center mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-lock me-1"></i>Secure checkout
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">Your cart is empty</h4>
+                        <p class="text-muted mb-4">Add some products to your cart and they will appear here.</p>
+                        <a href="{% url 'bika:product_list' %}" class="btn btn-primary">
+                            <i class="fas fa-shopping-bag me-2"></i>Continue Shopping
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.cart-item {
+    transition: all 0.3s ease;
+}
+
+.cart-item:hover {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+.quantity-controls .form-control {
+    border: 1px solid #dee2e6;
+}
+
+.quantity-controls .btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.table th {
+    font-weight: 600;
+    color: #495057;
+    border: none;
+}
+
+.card.border-primary {
+    border: 2px solid #667eea !important;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Quantity controls
+    document.querySelectorAll('.quantity-controls').forEach(control => {
+        const decreaseBtn = control.querySelector('.quantity-decrease');
+        const increaseBtn = control.querySelector('.quantity-increase');
+        const quantityInput = control.querySelector('.quantity-input');
+        const cartItem = control.closest('.cart-item');
+        const productId = cartItem.dataset.productId;
+        
+        decreaseBtn.addEventListener('click', function() {
+            let quantity = parseInt(quantityInput.value);
+            if (quantity > 1) {
+                quantityInput.value = quantity - 1;
+                updateCartQuantity(productId, quantity - 1);
+            }
+        });
+        
+        increaseBtn.addEventListener('click', function() {
+            let quantity = parseInt(quantityInput.value);
+            const maxQuantity = parseInt(quantityInput.max);
+            if (quantity < maxQuantity) {
+                quantityInput.value = quantity + 1;
+                updateCartQuantity(productId, quantity + 1);
+            }
+        });
+        
+        quantityInput.addEventListener('change', function() {
+            let quantity = parseInt(this.value);
+            const maxQuantity = parseInt(this.max);
+            const minQuantity = parseInt(this.min);
+            
+            if (quantity < minQuantity) quantity = minQuantity;
+            if (quantity > maxQuantity) quantity = maxQuantity;
+            
+            this.value = quantity;
+            updateCartQuantity(productId, quantity);
+        });
+    });
+    
+    // Remove from cart
+    document.querySelectorAll('.remove-from-cart').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            const cartItem = this.closest('.cart-item');
+            
+            fetch(`/cart/remove/${productId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    cartItem.remove();
+                    updateCartTotals(data);
+                    showToast('Product removed from cart!', 'success');
+                }
+            });
+        });
+    });
+    
+    // Add to wishlist from cart
+    document.querySelectorAll('.add-to-wishlist').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            const cartItem = this.closest('.cart-item');
+            
+            fetch(`/wishlist/add/${productId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Product added to wishlist!', 'success');
+                }
+            });
+        });
+    });
+    
+    function updateCartQuantity(productId, quantity) {
+        fetch(`/cart/update/${productId}/`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `quantity=${quantity}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const cartItem = document.querySelector(`.cart-item[data-product-id="${productId}"]`);
+                const itemTotal = cartItem.querySelector('.item-total');
+                itemTotal.textContent = `$${data.item_total}`;
+                updateCartTotals(data);
+            }
+        });
+    }
+    
+    function updateCartTotals(data) {
+        document.querySelector('.cart-subtotal').textContent = `$${data.total_price}`;
+        document.querySelector('.cart-grand-total').textContent = `$${(parseFloat(data.total_price) + 5 + parseFloat(data.total_price)).toFixed(2)}`;
+        
+        // Update cart count in header
+        const cartBadge = document.querySelector('.fa-shopping-cart').parentElement.querySelector('.badge');
+        if (cartBadge) {
+            cartBadge.textContent = data.cart_count || 0;
+        }
+        
+        // Update cart count in sidebar
+        const sidebarCartBadge = document.querySelector('.list-group-item[href*="cart"] .badge');
+        if (sidebarCartBadge) {
+            sidebarCartBadge.textContent = data.cart_count || 0;
+        }
+    }
+    
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed top-0 end-0 m-3`;
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+});
+</script>
+{% endblock %}

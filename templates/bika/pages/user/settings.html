@@ -1,0 +1,441 @@
+{% extends 'bika/base.html' %}
+{% load static %}
+
+{% block title %}Account Settings - Bika{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            {% include 'bika/partials/user_sidebar.html' %}
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-cog me-2"></i>Account Settings</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'bika:user_settings' %}">
+                        {% csrf_token %}
+                        
+                        <!-- Notification Settings -->
+                        <div class="mb-5">
+                            <h5 class="mb-3 border-bottom pb-2">
+                                <i class="fas fa-bell me-2 text-warning"></i>Notification Settings
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" name="email_notifications" 
+                                               id="email_notifications" {% if user.email_notifications %}checked{% endif %}>
+                                        <label class="form-check-label" for="email_notifications">
+                                            Email Notifications
+                                        </label>
+                                        <small class="form-text text-muted d-block">
+                                            Receive order updates and promotions via email
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" name="sms_notifications" 
+                                               id="sms_notifications" {% if user.sms_notifications %}checked{% endif %}>
+                                        <label class="form-check-label" for="sms_notifications">
+                                            SMS Notifications
+                                        </label>
+                                        <small class="form-text text-muted d-block">
+                                            Receive order updates via SMS
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" name="newsletter_subscription" 
+                                               id="newsletter_subscription" {% if user.newsletter_subscription %}checked{% endif %}>
+                                        <label class="form-check-label" for="newsletter_subscription">
+                                            Newsletter Subscription
+                                        </label>
+                                        <small class="form-text text-muted d-block">
+                                            Receive our weekly newsletter with updates and offers
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" name="price_alerts" 
+                                               id="price_alerts" {% if user.price_alerts %}checked{% endif %}>
+                                        <label class="form-check-label" for="price_alerts">
+                                            Price Drop Alerts
+                                        </label>
+                                        <small class="form-text text-muted d-block">
+                                            Get notified when products in your wishlist go on sale
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Privacy Settings -->
+                        <div class="mb-5">
+                            <h5 class="mb-3 border-bottom pb-2">
+                                <i class="fas fa-shield-alt me-2 text-success"></i>Privacy Settings
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" name="public_profile" 
+                                               id="public_profile" {% if user.public_profile %}checked{% endif %}>
+                                        <label class="form-check-label" for="public_profile">
+                                            Public Profile
+                                        </label>
+                                        <small class="form-text text-muted d-block">
+                                            Allow others to see your profile and reviews
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" name="data_collection" 
+                                               id="data_collection" {% if user.data_collection %}checked{% endif %}>
+                                        <label class="form-check-label" for="data_collection">
+                                            Data Collection
+                                        </label>
+                                        <small class="form-text text-muted d-block">
+                                            Allow us to collect anonymous usage data to improve our services
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Security Settings -->
+                        <div class="mb-5">
+                            <h5 class="mb-3 border-bottom pb-2">
+                                <i class="fas fa-lock me-2 text-danger"></i>Security Settings
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Two-Factor Authentication</label>
+                                        <select class="form-select" name="two_factor_auth">
+                                            <option value="disabled" {% if user.two_factor_auth == 'disabled' %}selected{% endif %}>Disabled</option>
+                                            <option value="email" {% if user.two_factor_auth == 'email' %}selected{% endif %}>Email</option>
+                                            <option value="sms" {% if user.two_factor_auth == 'sms' %}selected{% endif %}>SMS</option>
+                                            <option value="app" {% if user.two_factor_auth == 'app' %}selected{% endif %}>Authenticator App</option>
+                                        </select>
+                                        <small class="form-text text-muted">
+                                            Add an extra layer of security to your account
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Login Notifications</label>
+                                        <select class="form-select" name="login_notifications">
+                                            <option value="all" {% if user.login_notifications == 'all' %}selected{% endif %}>All Logins</option>
+                                            <option value="new" {% if user.login_notifications == 'new' %}selected{% endif %}>New Devices Only</option>
+                                            <option value="none" {% if user.login_notifications == 'none' %}selected{% endif %}>None</option>
+                                        </select>
+                                        <small class="form-text text-muted">
+                                            Get notified about suspicious login activity
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Account Management -->
+                        <div class="mb-4">
+                            <h5 class="mb-3 border-bottom pb-2">
+                                <i class="fas fa-user-cog me-2 text-info"></i>Account Management
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="d-grid gap-2 mb-3">
+                                        <a href="{% url 'password_reset' %}" class="btn btn-outline-primary">
+                                            <i class="fas fa-key me-2"></i>Change Password
+                                        </a>
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#exportDataModal">
+                                            <i class="fas fa-download me-2"></i>Export My Data
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-grid gap-2 mb-3">
+                                        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deactivateAccountModal">
+                                            <i class="fas fa-user-slash me-2"></i>Deactivate Account
+                                        </button>
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <button type="button" class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                                            <i class="fas fa-trash me-2"></i>Delete Account
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a href="{% url 'bika:user_profile' %}" class="btn btn-secondary">Cancel</a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Save Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Data Modal -->
+<div class="modal fade" id="exportDataModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="fas fa-download me-2"></i>Export My Data</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>This will generate a file containing all your personal data including:</p>
+                <ul>
+                    <li>Profile information</li>
+                    <li>Order history</li>
+                    <li>Wishlist items</li>
+                    <li>Reviews and ratings</li>
+                    <li>Address book</li>
+                </ul>
+                <p>The export file will be sent to your email address: <strong>{{ user.email }}</strong></p>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    This process may take a few minutes. You'll receive an email with a download link when your data is ready.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="exportDataBtn">
+                    <i class="fas fa-download me-2"></i>Export Data
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deactivate Account Modal -->
+<div class="modal fade" id="deactivateAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="fas fa-user-slash me-2"></i>Deactivate Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action will temporarily disable your account.
+                </div>
+                <p>When you deactivate your account:</p>
+                <ul>
+                    <li>Your profile will be hidden from other users</li>
+                    <li>You won't be able to place new orders</li>
+                    <li>Your existing orders will remain active</li>
+                    <li>You can reactivate your account anytime by logging in</li>
+                </ul>
+                <div class="mb-3">
+                    <label for="deactivateReason" class="form-label">Reason for deactivation (optional):</label>
+                    <textarea class="form-control" id="deactivateReason" rows="3" placeholder="Tell us why you're deactivating your account..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="deactivateAccountBtn">
+                    <i class="fas fa-user-slash me-2"></i>Deactivate Account
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-trash me-2"></i>Delete Account</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>This action cannot be undone!</strong>
+                </div>
+                <p>When you delete your account:</p>
+                <ul>
+                    <li>All your personal data will be permanently deleted</li>
+                    <li>Your order history will be anonymized</li>
+                    <li>Your reviews and ratings will be removed</li>
+                    <li>You will lose access to all Bika services</li>
+                </ul>
+                <div class="mb-3">
+                    <label for="deleteConfirmation" class="form-label">
+                        To confirm, type "DELETE" below:
+                    </label>
+                    <input type="text" class="form-control" id="deleteConfirmation" placeholder="Type DELETE to confirm">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="deleteAccountBtn" disabled>
+                    <i class="fas fa-trash me-2"></i>Permanently Delete Account
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-check-input:checked {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.card-header {
+    border-bottom: none;
+}
+
+.border-bottom {
+    border-color: #e9ecef !important;
+}
+
+.btn {
+    border-radius: 8px;
+}
+
+.modal-header {
+    border-bottom: none;
+}
+
+.alert {
+    border: none;
+    border-radius: 8px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Export Data
+    document.getElementById('exportDataBtn').addEventListener('click', function() {
+        const btn = this;
+        const originalText = btn.innerHTML;
+        
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Exporting...';
+        btn.disabled = true;
+        
+        // Simulate API call
+        setTimeout(() => {
+            showToast('Data export started! You will receive an email shortly.', 'success');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            bootstrap.Modal.getInstance(document.getElementById('exportDataModal')).hide();
+        }, 2000);
+    });
+    
+    // Deactivate Account
+    document.getElementById('deactivateAccountBtn').addEventListener('click', function() {
+        if (confirm('Are you sure you want to deactivate your account? You can reactivate anytime by logging in.')) {
+            const btn = this;
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deactivating...';
+            btn.disabled = true;
+            
+            // In a real application, you would make an API call here
+            setTimeout(() => {
+                showToast('Account deactivated successfully.', 'warning');
+                bootstrap.Modal.getInstance(document.getElementById('deactivateAccountModal')).hide();
+                // Redirect to home or login page
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1500);
+            }, 2000);
+        }
+    });
+    
+    // Delete Account Confirmation
+    const deleteConfirmation = document.getElementById('deleteConfirmation');
+    const deleteAccountBtn = document.getElementById('deleteAccountBtn');
+    
+    deleteConfirmation.addEventListener('input', function() {
+        deleteAccountBtn.disabled = this.value !== 'DELETE';
+    });
+    
+    // Delete Account
+    deleteAccountBtn.addEventListener('click', function() {
+        if (confirm('This will permanently delete your account and all data. This action cannot be undone!')) {
+            const btn = this;
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
+            btn.disabled = true;
+            
+            // In a real application, you would make an API call here
+            setTimeout(() => {
+                showToast('Account deleted successfully.', 'danger');
+                bootstrap.Modal.getInstance(document.getElementById('deleteAccountModal')).hide();
+                // Redirect to home page
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1500);
+            }, 2000);
+        }
+    });
+    
+    // Form submission feedback
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+        submitBtn.disabled = true;
+        
+        // Re-enable button after 3 seconds in case of error
+        setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }, 3000);
+    });
+    
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed top-0 end-0 m-3`;
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+});
+</script>
+{% endblock %}
