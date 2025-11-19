@@ -43,3 +43,23 @@ body {
     transform: translateY(-2px);
     transition: transform 0.2s ease;
 }
+/* Add to your style.css */
+.product-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 25px rgba(0,0,0,0.15);
+}
+
+.product-card .card-img-top {
+    height: 200px;
+    object-fit: cover;
+}
+
+.become-vendor-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}

@@ -16,7 +16,7 @@
                     <p class="text-muted mb-4">You have been successfully logged out of your Bika account.</p>
                     
                     <div class="logout-actions">
-                        <a href="{% url 'admin:login' %}" class="btn btn-primary me-3">
+                        <a href="{% url 'bika:login' %}" class="btn btn-primary me-3">  <!-- CHANGED HERE -->
                             <i class="fas fa-sign-in-alt me-2"></i>Sign In Again
                         </a>
                         <a href="{% url 'bika:home' %}" class="btn btn-outline-secondary">

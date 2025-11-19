@@ -113,6 +113,20 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Login/Logout URLs
-LOGIN_REDIRECT_URL = 'bika:home'  # Where to redirect after login
-LOGOUT_REDIRECT_URL = 'bika:home'  # Where to redirect after logout
-LOGIN_URL = 'login'  # URL name for login page
+
+LOGIN_REDIRECT_URL = 'bika:admin_dashboard'  # Redirect to your custom dashboard
+LOGOUT_REDIRECT_URL = 'bika:home'  # Redirect to home after logout
+LOGIN_URL = 'bika:login'
+
+# Email configuration (for password reset)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For development
+# For production, use:
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'your-smtp-host'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'abeliniyigena@gmail.com'
+# EMAIL_HOST_PASSWORD = 'MUGO12ruku__'
+# DEFAULT_FROM_EMAIL = 'Bika <noreply@bika.com>'
+
+AUTH_USER_MODEL = 'bika.CustomUser'

@@ -1,0 +1,504 @@
+{% extends 'bika/base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Register - Bika{% endblock %}
+
+{% block extra_css %}
+<style>
+.register-section {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 100px 0 50px;
+}
+
+.register-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    max-width: 500px;
+    width: 100%;
+}
+
+.register-header {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    padding: 30px;
+    text-align: center;
+}
+
+.register-header h2 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.register-header p {
+    margin: 10px 0 0;
+    opacity: 0.9;
+}
+
+.register-body {
+    padding: 30px;
+}
+
+.register-logo {
+    width: 80px;
+    height: 80px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.register-logo i {
+    font-size: 2rem;
+    color: #28a745;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-control {
+    border-radius: 10px;
+    padding: 12px 15px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+.btn-register {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+    border-radius: 10px;
+    padding: 12px 30px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    width: 100%;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-register:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+    color: white;
+}
+
+.register-links {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.register-links a {
+    color: #6c757d;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.register-links a:hover {
+    color: #28a745;
+}
+
+.alert {
+    border-radius: 10px;
+    border: none;
+}
+
+.password-requirements {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 15px;
+    margin-top: 10px;
+    font-size: 0.85rem;
+}
+
+.password-requirements ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.password-requirements li {
+    margin-bottom: 5px;
+    color: #6c757d;
+}
+
+.user-type-selection {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+}
+
+.user-type-btn {
+    flex: 1;
+    padding: 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.user-type-btn:hover {
+    border-color: #28a745;
+    transform: translateY(-2px);
+}
+
+.user-type-btn.active {
+    border-color: #28a745;
+    background: #f8fff9;
+}
+
+.user-type-btn i {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.vendor-fields {
+    display: none;
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .register-section {
+        padding: 80px 15px 30px;
+    }
+    
+    .register-card {
+        margin: 0 auto;
+    }
+    
+    .user-type-selection {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="register-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="register-card">
+                    <!-- Header -->
+                    <div class="register-header">
+                        <div class="register-logo">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <h2>Join Bika</h2>
+                        <p>Create your account to get started</p>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="register-body">
+                        <!-- Messages -->
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <!-- User Type Selection -->
+                        <div class="user-type-selection">
+                            <div class="user-type-btn active" data-type="customer">
+                                <i class="fas fa-user"></i>
+                                <strong>Customer</strong>
+                                <small class="text-muted d-block">Shop products</small>
+                            </div>
+                            <div class="user-type-btn" data-type="vendor">
+                                <i class="fas fa-store"></i>
+                                <strong>Vendor</strong>
+                                <small class="text-muted d-block">Sell products</small>
+                            </div>
+                        </div>
+
+                        <!-- Registration Form -->
+                        <form method="post" id="registrationForm">
+                            {% csrf_token %}
+                            
+                            <!-- Hidden user type field -->
+                            <input type="hidden" name="user_type" id="id_user_type" value="customer">
+                            
+                            <!-- Personal Information -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="id_first_name" class="form-label">
+                                            <i class="fas fa-user me-2"></i>First Name
+                                        </label>
+                                        <input type="text" 
+                                               name="first_name" 
+                                               id="id_first_name" 
+                                               class="form-control" 
+                                               placeholder="First Name"
+                                               required
+                                               value="{{ form.first_name.value|default:'' }}">
+                                        {% if form.first_name.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ form.first_name.errors }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="id_last_name" class="form-label">
+                                            Last Name
+                                        </label>
+                                        <input type="text" 
+                                               name="last_name" 
+                                               id="id_last_name" 
+                                               class="form-control" 
+                                               placeholder="Last Name"
+                                               required
+                                               value="{{ form.last_name.value|default:'' }}">
+                                        {% if form.last_name.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ form.last_name.errors }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contact Information -->
+                            <div class="form-group">
+                                <label for="id_email" class="form-label">
+                                    <i class="fas fa-envelope me-2"></i>Email Address
+                                </label>
+                                <input type="email" 
+                                       name="email" 
+                                       id="id_email" 
+                                       class="form-control" 
+                                       placeholder="your.email@example.com"
+                                       required
+                                       value="{{ form.email.value|default:'' }}">
+                                {% if form.email.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.email.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-group">
+                                <label for="id_phone" class="form-label">
+                                    <i class="fas fa-phone me-2"></i>Phone Number
+                                </label>
+                                <input type="text" 
+                                       name="phone" 
+                                       id="id_phone" 
+                                       class="form-control" 
+                                       placeholder="+1 234 567 8900"
+                                       value="{{ form.phone.value|default:'' }}">
+                                {% if form.phone.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.phone.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Vendor Fields (Hidden by default) -->
+                            <div class="vendor-fields" id="vendorFields">
+                                <h6 class="mb-3"><i class="fas fa-store me-2"></i>Business Information</h6>
+                                <div class="form-group">
+                                    <label for="id_business_name" class="form-label">Business Name</label>
+                                    <input type="text" 
+                                           name="business_name" 
+                                           id="id_business_name" 
+                                           class="form-control" 
+                                           placeholder="Your Business Name"
+                                           value="{{ form.business_name.value|default:'' }}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_business_description" class="form-label">Business Description</label>
+                                    <textarea name="business_description" 
+                                              id="id_business_description" 
+                                              class="form-control" 
+                                              placeholder="Describe your business"
+                                              rows="3">{{ form.business_description.value|default:'' }}</textarea>
+                                </div>
+                            </div>
+
+                            <!-- Account Information -->
+                            <div class="form-group">
+                                <label for="id_username" class="form-label">
+                                    <i class="fas fa-user me-2"></i>Username
+                                </label>
+                                <input type="text" 
+                                       name="username" 
+                                       id="id_username" 
+                                       class="form-control" 
+                                       placeholder="Choose a username"
+                                       required
+                                       value="{{ form.username.value|default:'' }}">
+                                {% if form.username.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.username.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-group">
+                                <label for="id_password1" class="form-label">
+                                    <i class="fas fa-lock me-2"></i>Password
+                                </label>
+                                <input type="password" 
+                                       name="password1" 
+                                       id="id_password1" 
+                                       class="form-control" 
+                                       placeholder="Create a password"
+                                       required>
+                                {% if form.password1.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.password1.errors }}
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- Password Requirements -->
+                                <div class="password-requirements">
+                                    <small class="text-muted">Your password must contain:</small>
+                                    <ul>
+                                        <li>At least 8 characters</li>
+                                        <li>Cannot be too common</li>
+                                        <li>Cannot be entirely numeric</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="id_password2" class="form-label">
+                                    <i class="fas fa-lock me-2"></i>Confirm Password
+                                </label>
+                                <input type="password" 
+                                       name="password2" 
+                                       id="id_password2" 
+                                       class="form-control" 
+                                       placeholder="Confirm your password"
+                                       required>
+                                {% if form.password2.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.password2.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Terms Agreement -->
+                            <div class="form-group">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="agree_terms" required>
+                                    <label class="form-check-label" for="agree_terms">
+                                        I agree to the <a href="#" class="text-decoration-none">Terms of Service</a> and <a href="#" class="text-decoration-none">Privacy Policy</a>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <button type="submit" class="btn btn-register mb-3">
+                                <i class="fas fa-user-plus me-2"></i>Create Account
+                            </button>
+                        </form>
+
+                        <!-- Login Link -->
+                        <div class="register-links">
+                            <p class="mb-0">
+                                Already have an account? 
+                                <a href="{% url 'bika:login' %}" class="ms-1">Sign in here</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // User type selection
+    const userTypeBtns = document.querySelectorAll('.user-type-btn');
+    const userTypeField = document.getElementById('id_user_type');
+    const vendorFields = document.getElementById('vendorFields');
+    
+    userTypeBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Remove active class from all buttons
+            userTypeBtns.forEach(b => b.classList.remove('active'));
+            // Add active class to clicked button
+            this.classList.add('active');
+            
+            const userType = this.dataset.type;
+            userTypeField.value = userType;
+            
+            // Show/hide vendor fields
+            if (userType === 'vendor') {
+                vendorFields.style.display = 'block';
+                // Make vendor fields required
+                document.getElementById('id_business_name').required = true;
+            } else {
+                vendorFields.style.display = 'none';
+                // Remove required from vendor fields
+                document.getElementById('id_business_name').required = false;
+            }
+        });
+    });
+
+    // Password strength indicator
+    const password1 = document.getElementById('id_password1');
+    const password2 = document.getElementById('id_password2');
+    
+    function checkPasswordMatch() {
+        if (password1.value && password2.value) {
+            if (password1.value !== password2.value) {
+                password2.style.borderColor = '#dc3545';
+            } else {
+                password2.style.borderColor = '#28a745';
+            }
+        }
+    }
+    
+    password1.addEventListener('input', checkPasswordMatch);
+    password2.addEventListener('input', checkPasswordMatch);
+    
+    // Form submission loading state
+    const form = document.getElementById('registrationForm');
+    form.addEventListener('submit', function() {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Account...';
+        submitBtn.disabled = true;
+        
+        // Re-enable after 5 seconds (in case of error)
+        setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }, 5000);
+    });
+
+    // Auto-focus first field
+    document.getElementById('id_first_name').focus();
+});
+</script>
+{% endblock %}

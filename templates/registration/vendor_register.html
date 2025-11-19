@@ -1,0 +1,232 @@
+{% extends 'bika/base.html' %}
+{% load static %}
+
+{% block title %}Vendor Registration - Bika{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white text-center py-4">
+                    <h2 class="mb-0">Become a Bika Vendor</h2>
+                    <p class="mb-0 mt-2">Start selling your products on our marketplace</p>
+                </div>
+                <div class="card-body p-5">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <strong>Please correct the errors below:</strong>
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <!-- Business Information -->
+                        <div class="mb-4">
+                            <h5 class="text-primary mb-3">Business Information</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="{{ form.business_name.id_for_label }}" class="form-label">Business Name *</label>
+                                        {{ form.business_name }}
+                                        {% if form.business_name.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.business_name.errors }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="{{ form.phone.id_for_label }}" class="form-label">Phone Number *</label>
+                                        {{ form.phone }}
+                                        {% if form.phone.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.phone.errors }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="{{ form.business_description.id_for_label }}" class="form-label">Business Description</label>
+                                {{ form.business_description }}
+                                {% if form.business_description.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.business_description.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Account Information -->
+                        <div class="mb-4">
+                            <h5 class="text-primary mb-3">Account Information</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="{{ form.username.id_for_label }}" class="form-label">Username *</label>
+                                        {{ form.username }}
+                                        {% if form.username.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.username.errors }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="{{ form.email.id_for_label }}" class="form-label">Email *</label>
+                                        {{ form.email }}
+                                        {% if form.email.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.email.errors }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name *</label>
+                                        {{ form.first_name }}
+                                        {% if form.first_name.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.first_name.errors }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name *</label>
+                                        {{ form.last_name }}
+                                        {% if form.last_name.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.last_name.errors }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="{{ form.password1.id_for_label }}" class="form-label">Password *</label>
+                                        {{ form.password1 }}
+                                        {% if form.password1.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.password1.errors }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="{{ form.password2.id_for_label }}" class="form-label">Confirm Password *</label>
+                                        {{ form.password2 }}
+                                        {% if form.password2.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.password2.errors }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Terms and Submit -->
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="terms" required>
+                            <label class="form-check-label" for="terms">
+                                I agree to the <a href="#" class="text-primary">Terms of Service</a> and <a href="#" class="text-primary">Vendor Agreement</a>
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100 py-3">
+                            <i class="fas fa-store me-2"></i>Become a Vendor
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <p class="mb-0">Already have an account? 
+                            <a href="{% url 'bika:login' %}" class="text-primary">Sign In</a>
+                        </p>
+                        <p class="mb-0">Want to shop instead? 
+                            <a href="{% url 'bika:register' %}" class="text-primary">Create Customer Account</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vendor Benefits -->
+            <div class="card mt-4 border-0 bg-light">
+                <div class="card-body">
+                    <h5 class="text-center mb-3">Why Become a Bika Vendor?</h5>
+                    <div class="row text-center">
+                        <div class="col-md-4 mb-3">
+                            <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                            <h6>Large Customer Base</h6>
+                            <p class="small text-muted">Access thousands of potential customers</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <i class="fas fa-chart-line fa-2x text-primary mb-2"></i>
+                            <h6>Easy Analytics</h6>
+                            <p class="small text-muted">Track your sales and customer behavior</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <i class="fas fa-shield-alt fa-2x text-primary mb-2"></i>
+                            <h6>Secure Payments</h6>
+                            <p class="small text-muted">Safe and reliable payment processing</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-group label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.form-control {
+    border-radius: 8px;
+    padding: 12px 15px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.card {
+    border-radius: 15px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+</style>
+{% endblock %}

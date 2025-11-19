@@ -1,5 +1,8 @@
 from django.urls import path
 from . import views
+from django.urls import path
+from django.contrib.auth import views as auth_views
+from . import views
 
 app_name = 'bika'
 
@@ -13,6 +16,60 @@ urlpatterns = [
     path('faq/', views.faq_view, name='faq'),
     path('dashboard/', views.admin_dashboard, name='admin_dashboard'),
     # AJAX/API endpoints
+    path('register/', views.register_view, name='register'),
+        # Authentication URLs - MAKE SURE THESE EXIST
+    path('login/', auth_views.LoginView.as_view(
+        template_name='bika/registration/login.html',
+        redirect_authenticated_user=True
+    ), name='login'),
     
+    path('logout/', auth_views.LogoutView.as_view(
+        template_name='bika/pages/registration/logout.html'
+    ), name='logout'),
+    path('admin/logout/', auth_views.LogoutView.as_view(
+        template_name='bika/pages/registration/logout.html'
+    ), name='logout'),
+        # Product URLs (ADD THESE)
+    path('products/', views.product_list_view, name='product_list'),
+    path('products/category/<slug:category_slug>/', views.products_by_category_view, name='products_by_category'),
+    path('products/<slug:slug>/', views.product_detail_view, name='product_detail'),
+    path('products/search/', views.product_search_view, name='product_search'),
+    
+    # Vendor URLs (ADD THESE)
+    path('vendor/dashboard/', views.vendor_dashboard, name='vendor_dashboard'),
+    path('vendor/products/', views.vendor_product_list, name='vendor_product_list'),
+    path('vendor/products/add/', views.vendor_add_product, name='vendor_add_product'),
+    path('vendor/register/', views.vendor_register_view, name='vendor_register'),
+    
+    # Password Reset URLs
+    path('password-reset/', 
+         auth_views.PasswordResetView.as_view(
+             template_name='bika/registration/password_reset.html',
+             email_template_name='bika/registration/password_reset_email.html',
+             subject_template_name='bika/registration/password_reset_subject.txt',
+             success_url='/password-reset/done/'
+         ), 
+         name='password_reset'),
+    
+    path('password-reset/done/', 
+         auth_views.PasswordResetDoneView.as_view(
+             template_name='bika/registration/password_reset_done.html'
+         ), 
+         name='password_reset_done'),
+    
+    path('password-reset-confirm/<uidb64>/<token>/', 
+         auth_views.PasswordResetConfirmView.as_view(
+             template_name='bika/registration/password_reset_confirm.html',
+             success_url='/password-reset-complete/'
+         ), 
+         name='password_reset_confirm'),
+    
+    path('password-reset-complete/', 
+         auth_views.PasswordResetCompleteView.as_view(
+             template_name='bika/registration/password_reset_complete.html'
+         ), 
+         name='password_reset_complete'),
+    
+    # AJAX/API endpoints
     path('newsletter/subscribe/', views.newsletter_subscribe, name='newsletter_subscribe'),
 ]

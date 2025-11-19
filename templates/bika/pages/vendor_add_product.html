@@ -1,0 +1,604 @@
+{% extends 'bika/base.html' %}
+{% load static %}
+
+{% block title %}Add Product - Bika{% endblock %}
+
+{% block extra_css %}
+<style>
+.product-form-section {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 30px 0;
+}
+
+.form-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.08);
+    border: none;
+    margin-bottom: 30px;
+}
+
+.form-card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px 15px 0 0 !important;
+    padding: 25px 30px;
+}
+
+.form-card-body {
+    padding: 30px;
+}
+
+.form-section {
+    margin-bottom: 30px;
+    padding-bottom: 25px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.section-title {
+    color: #2c3e50;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-title i {
+    color: #667eea;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 8px;
+}
+
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    padding: 12px 15px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.form-check-input:checked {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 10px;
+    padding: 12px 30px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.help-text {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+.required-field::after {
+    content: " *";
+    color: #dc3545;
+}
+
+.image-preview {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+    padding: 10px;
+}
+
+.price-input-group .input-group-text {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-right: none;
+}
+
+.price-input-group .form-control {
+    border-left: none;
+}
+
+.tab-pane {
+    padding: 25px 0;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    color: #6c757d;
+    font-weight: 500;
+    padding: 12px 25px;
+    border-radius: 8px 8px 0 0;
+}
+
+.nav-tabs .nav-link.active {
+    background: #667eea;
+    color: white;
+    border: none;
+}
+
+.inventory-alert {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+}
+
+.featured-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .form-card-body {
+        padding: 20px;
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="product-form-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <!-- Header Card -->
+                <div class="form-card">
+                    <div class="form-card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h2 class="mb-2"><i class="fas fa-plus-circle me-2"></i>Add New Product</h2>
+                                <p class="mb-0">Fill in the details below to list your product on Bika Marketplace</p>
+                            </div>
+                            <div class="featured-badge">
+                                <i class="fas fa-store me-1"></i>Vendor Panel
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Form -->
+                <div class="form-card">
+                    <div class="form-card-body">
+                        <form method="post" enctype="multipart/form-data" novalidate>
+                            {% csrf_token %}
+                            
+                            {% if form.errors %}
+                            <div class="alert alert-danger">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Please correct the errors below:
+                                </h6>
+                                <ul class="mb-0 mt-2">
+                                    {% for field in form %}
+                                        {% for error in field.errors %}
+                                            <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                    {% for error in form.non_field_errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+
+                            <!-- Basic Information Section -->
+                            <div class="form-section">
+                                <h4 class="section-title">
+                                    <i class="fas fa-info-circle"></i>Basic Information
+                                </h4>
+                                
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.name.id_for_label }}" class="form-label required-field">Product Name</label>
+                                            {{ form.name }}
+                                            <div class="help-text">Enter a clear and descriptive product name</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.sku.id_for_label }}" class="form-label required-field">SKU</label>
+                                            {{ form.sku }}
+                                            <div class="help-text">Unique stock keeping unit</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.slug.id_for_label }}" class="form-label required-field">URL Slug</label>
+                                            {{ form.slug }}
+                                            <div class="help-text">URL-friendly version of the name (e.g., "my-awesome-product")</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.category.id_for_label }}" class="form-label required-field">Category</label>
+                                            {{ form.category }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.short_description.id_for_label }}" class="form-label">Short Description</label>
+                                    {{ form.short_description }}
+                                    <div class="help-text">Brief description shown in product listings (max 300 characters)</div>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.description.id_for_label }}" class="form-label required-field">Full Description</label>
+                                    {{ form.description }}
+                                    <div class="help-text">Detailed product description with features and benefits</div>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.tags.id_for_label }}" class="form-label">Tags</label>
+                                    {{ form.tags }}
+                                    <div class="help-text">Comma-separated keywords for better searchability</div>
+                                </div>
+                            </div>
+
+                            <!-- Pricing Section -->
+                            <div class="form-section">
+                                <h4 class="section-title">
+                                    <i class="fas fa-tag"></i>Pricing & Inventory
+                                </h4>
+                                
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.price.id_for_label }}" class="form-label required-field">Price ($)</label>
+                                            <div class="input-group price-input-group">
+                                                <span class="input-group-text">$</span>
+                                                {{ form.price }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.compare_price.id_for_label }}" class="form-label">Compare Price ($)</label>
+                                            <div class="input-group price-input-group">
+                                                <span class="input-group-text">$</span>
+                                                {{ form.compare_price }}
+                                            </div>
+                                            <div class="help-text">Original price for showing discounts</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.cost_price.id_for_label }}" class="form-label">Cost Price ($)</label>
+                                            <div class="input-group price-input-group">
+                                                <span class="input-group-text">$</span>
+                                                {{ form.cost_price }}
+                                            </div>
+                                            <div class="help-text">Your cost for this product</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.stock_quantity.id_for_label }}" class="form-label">Stock Quantity</label>
+                                            {{ form.stock_quantity }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.low_stock_threshold.id_for_label }}" class="form-label">Low Stock Alert</label>
+                                            {{ form.low_stock_threshold }}
+                                            <div class="help-text">Get notified when stock reaches this level</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch mb-3">
+                                            {{ form.track_inventory }}
+                                            <label class="form-check-label" for="{{ form.track_inventory.id_for_label }}">Track Inventory</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch mb-3">
+                                            {{ form.allow_backorders }}
+                                            <label class="form-check-label" for="{{ form.allow_backorders.id_for_label }}">Allow Backorders</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.tax_rate.id_for_label }}" class="form-label">Tax Rate (%)</label>
+                                            {{ form.tax_rate }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Product Details Section -->
+                            <div class="form-section">
+                                <h4 class="section-title">
+                                    <i class="fas fa-cube"></i>Product Details
+                                </h4>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.brand.id_for_label }}" class="form-label">Brand</label>
+                                            {{ form.brand }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.model.id_for_label }}" class="form-label">Model</label>
+                                            {{ form.model }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.weight.id_for_label }}" class="form-label">Weight (kg)</label>
+                                            {{ form.weight }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.dimensions.id_for_label }}" class="form-label">Dimensions (cm)</label>
+                                            {{ form.dimensions }}
+                                            <div class="help-text">Format: LxWxH</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.material.id_for_label }}" class="form-label">Material</label>
+                                            {{ form.material }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.color.id_for_label }}" class="form-label">Color</label>
+                                            {{ form.color }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.size.id_for_label }}" class="form-label">Size</label>
+                                            {{ form.size }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Status & Settings Section -->
+                            <div class="form-section">
+                                <h4 class="section-title">
+                                    <i class="fas fa-cog"></i>Status & Settings
+                                </h4>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.status.id_for_label }}" class="form-label required-field">Status</label>
+                                            {{ form.status }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.condition.id_for_label }}" class="form-label required-field">Condition</label>
+                                            {{ form.condition }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch mb-3">
+                                            {{ form.is_featured }}
+                                            <label class="form-check-label" for="{{ form.is_featured.id_for_label }}">Feature this product</label>
+                                            <div class="help-text">Show this product in featured sections</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch mb-3">
+                                            {{ form.is_digital }}
+                                            <label class="form-check-label" for="{{ form.is_digital.id_for_label }}">Digital Product</label>
+                                            <div class="help-text">No physical shipping required</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SEO Section -->
+                            <div class="form-section">
+                                <h4 class="section-title">
+                                    <i class="fas fa-search"></i>SEO Settings
+                                </h4>
+                                
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.meta_title.id_for_label }}" class="form-label">Meta Title</label>
+                                    {{ form.meta_title }}
+                                    <div class="help-text">Title for search engines (leave blank to use product name)</div>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.meta_description.id_for_label }}" class="form-label">Meta Description</label>
+                                    {{ form.meta_description }}
+                                    <div class="help-text">Description for search engines (leave blank to use short description)</div>
+                                </div>
+                            </div>
+
+                            <!-- Form Actions -->
+                            <div class="form-section">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <a href="{% url 'bika:vendor_dashboard' %}" class="btn btn-outline-secondary">
+                                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                                        </a>
+                                    </div>
+                                    <div class="d-flex gap-3">
+                                        <button type="submit" name="save_draft" value="true" class="btn btn-outline-primary">
+                                            <i class="fas fa-save me-2"></i>Save as Draft
+                                        </button>
+                                        <button type="submit" name="publish" value="true" class="btn btn-primary">
+                                            <i class="fas fa-rocket me-2"></i>Publish Product
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Help Card -->
+                <div class="form-card">
+                    <div class="form-card-body">
+                        <h5 class="section-title">
+                            <i class="fas fa-lightbulb"></i>Tips for Success
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Use high-quality images</li>
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Write detailed descriptions</li>
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Set competitive pricing</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Use relevant keywords</li>
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Keep inventory updated</li>
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Respond to customer reviews</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-generate slug from product name
+    const nameField = document.getElementById('{{ form.name.id_for_label }}');
+    const slugField = document.getElementById('{{ form.slug.id_for_label }}');
+    
+    if (nameField && slugField) {
+        nameField.addEventListener('blur', function() {
+            if (!slugField.value) {
+                const slug = this.value
+                    .toLowerCase()
+                    .trim()
+                    .replace(/[^a-z0-9 -]/g, '') // Remove invalid chars
+                    .replace(/\s+/g, '-') // Replace spaces with -
+                    .replace(/-+/g, '-'); // Replace multiple - with single -
+                slugField.value = slug;
+            }
+        });
+    }
+
+    // Auto-calculate discount percentage
+    const priceField = document.getElementById('{{ form.price.id_for_label }}');
+    const comparePriceField = document.getElementById('{{ form.compare_price.id_for_label }}');
+    
+    function calculateDiscount() {
+        if (priceField && comparePriceField && priceField.value && comparePriceField.value) {
+            const price = parseFloat(priceField.value);
+            const comparePrice = parseFloat(comparePriceField.value);
+            
+            if (comparePrice > price) {
+                const discount = ((comparePrice - price) / comparePrice) * 100;
+                // You can display this somewhere if needed
+                console.log('Discount:', discount.toFixed(1) + '%');
+            }
+        }
+    }
+    
+    if (priceField) priceField.addEventListener('input', calculateDiscount);
+    if (comparePriceField) comparePriceField.addEventListener('input', calculateDiscount);
+
+    // Form validation enhancement
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const requiredFields = form.querySelectorAll('.required-field');
+        let valid = true;
+        
+        requiredFields.forEach(field => {
+            const input = form.querySelector(`#${field.getAttribute('for')}`);
+            if (input && !input.value.trim()) {
+                valid = false;
+                input.classList.add('is-invalid');
+            } else {
+                input.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!valid) {
+            e.preventDefault();
+            alert('Please fill in all required fields marked with *');
+        }
+    });
+
+    // Real-time character counter for short description
+    const shortDescField = document.getElementById('{{ form.short_description.id_for_label }}');
+    if (shortDescField) {
+        const counter = document.createElement('div');
+        counter.className = 'help-text text-end';
+        shortDescField.parentNode.appendChild(counter);
+        
+        shortDescField.addEventListener('input', function() {
+            const count = this.value.length;
+            counter.textContent = `${count}/300 characters`;
+            
+            if (count > 300) {
+                counter.classList.add('text-danger');
+            } else {
+                counter.classList.remove('text-danger');
+            }
+        });
+        
+        // Trigger initially
+        shortDescField.dispatchEvent(new Event('input'));
+    }
+});
+</script>
+{% endblock %}
