@@ -7,6 +7,23 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 import random
 import string
 
+# ==================== COLLABORATION / UNIT MODEL ====================
+
+class Unit(models.Model):
+    """Team/unit for collaborative visibility (e.g., same team sees same products)."""
+    name = models.CharField(max_length=120, unique=True)
+    code = models.CharField(max_length=20, unique=True, blank=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.code})" if self.code else self.name
+
+
 # ==================== USER MODELS ====================
 
 class CustomUser(AbstractUser):
@@ -16,6 +33,13 @@ class CustomUser(AbstractUser):
         ('vendor', 'Vendor'),
         ('admin', 'Administrator'),
     ]
+
+    # Collaboration role in app operations
+    ROLE_CHOICES = [
+        ("staff", "Staff"),
+        ("commander", "Commander"),
+        ("admin", "Admin"),
+    ]
     
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
     phone = models.CharField(max_length=20, blank=True)
@@ -24,6 +48,12 @@ class CustomUser(AbstractUser):
     profile_picture = models.ImageField(upload_to='profiles/', blank=True, null=True)
     email_verified = models.BooleanField(default=False)
     phone_verified = models.BooleanField(default=False)
+
+    # Collaboration fields
+    unit = models.ForeignKey(
+        Unit, on_delete=models.SET_NULL, null=True, blank=True, related_name="users"
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="staff")
     
     # Additional fields for vendors
     business_name = models.CharField(max_length=200, blank=True)
@@ -42,6 +72,10 @@ class CustomUser(AbstractUser):
     
     def is_customer(self):
         return self.user_type == 'customer'
+
+    def can_see_all_unit_products(self):
+        return self.role in {"commander", "admin"} or self.user_type == "admin"
+
 
 # ==================== CORE MODELS ====================
 
@@ -65,6 +99,7 @@ class ProductCategory(models.Model):
     def get_absolute_url(self):
         return reverse('bika:products_by_category', kwargs={'category_slug': self.slug})
 
+
 class Product(models.Model):
     """Main product model"""
     STATUS_CHOICES = [
@@ -80,6 +115,12 @@ class Product(models.Model):
         ('used_like_new', 'Used - Like New'),
         ('used_good', 'Used - Good'),
         ('used_fair', 'Used - Fair'),
+    ]
+
+    VISIBILITY_CHOICES = [
+        ("unit", "Visible to same unit"),
+        ("vendor", "Visible to same vendor"),
+        ("private", "Only creator"),
     ]
     
     # Basic Information
@@ -123,6 +164,12 @@ class Product(models.Model):
     condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='new')
     is_featured = models.BooleanField(default=False)
     is_digital = models.BooleanField(default=False, verbose_name="Digital Product")
+
+    # Collaboration fields
+    created_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_products"
+    )
+    visibility = models.CharField(max_length=20, choices=VISIBILITY_CHOICES, default="unit")
     
     # Vendor Information
     vendor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, limit_choices_to={'user_type': 'vendor'})
@@ -140,6 +187,11 @@ class Product(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=["vendor", "created_at"]),
+            models.Index(fields=["created_by", "created_at"]),
+            models.Index(fields=["visibility", "status"]),
+        ]
     
     def __str__(self):
         return f"{self.name} - {self.sku}"
@@ -151,6 +203,39 @@ class Product(models.Model):
         if self.status == 'active' and not self.published_at:
             self.published_at = timezone.now()
         super().save(*args, **kwargs)
+
+    def is_visible_to(self, user):
+        """Collaboration visibility helper."""
+        if not user or not user.is_authenticated:
+            return False
+
+        # global admins
+        if getattr(user, "is_superuser", False) or getattr(user, "role", "") == "admin":
+            return True
+
+        # creator always sees own
+        if self.created_by_id == user.id:
+            return True
+
+        # private => creator only
+        if self.visibility == "private":
+            return False
+
+        # same vendor scope
+        if self.visibility == "vendor":
+            return self.vendor_id == user.id or self.vendor_id in [
+                getattr(user, "id", None)
+            ]
+
+        # unit scope (default)
+        if self.visibility == "unit":
+            my_unit_id = getattr(user, "unit_id", None)
+            creator_unit_id = getattr(self.created_by, "unit_id", None)
+            vendor_unit_id = getattr(self.vendor, "unit_id", None)
+            if my_unit_id and (my_unit_id == creator_unit_id or my_unit_id == vendor_unit_id):
+                return True
+
+        return False
     
     @property
     def is_in_stock(self):
@@ -180,6 +265,7 @@ class Product(models.Model):
             status='active'
         ).exclude(id=self.id)[:limit]
 
+
 class ProductImage(models.Model):
     """Product images model"""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
@@ -199,6 +285,7 @@ class ProductImage(models.Model):
             # Ensure only one primary image per product
             ProductImage.objects.filter(product=self.product, is_primary=True).update(is_primary=False)
         super().save(*args, **kwargs)
+
 
 class ProductReview(models.Model):
     """Product reviews model"""
@@ -228,6 +315,7 @@ class ProductReview(models.Model):
     def __str__(self):
         return f"Review by {self.user.username} for {self.product.name}"
 
+
 # ==================== E-COMMERCE MODELS ====================
 
 class Wishlist(models.Model):
@@ -242,6 +330,7 @@ class Wishlist(models.Model):
     
     def __str__(self):
         return f"{self.user.username}'s wishlist - {self.product.name}"
+
 
 class Cart(models.Model):
     """Shopping cart model"""
@@ -266,6 +355,7 @@ class Cart(models.Model):
         quantity = Decimal(str(self.quantity))
         return price * quantity
     
+
 class Order(models.Model):
     """Order model"""
     STATUS_CHOICES = [
@@ -297,6 +387,7 @@ class Order(models.Model):
             self.order_number = f"ORD{timezone.now().strftime('%Y%m%d')}{random_str}"
         super().save(*args, **kwargs)
 
+
 class OrderItem(models.Model):
     """Order items model"""
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
@@ -310,6 +401,7 @@ class OrderItem(models.Model):
     @property
     def total_price(self):
         return self.price * self.quantity
+
 
 # ==================== FRUIT MONITORING MODELS ====================
 
@@ -335,6 +427,7 @@ class FruitType(models.Model):
     
     def __str__(self):
         return self.name
+
 
 class FruitBatch(models.Model):
     """Batch of fruits for monitoring"""
@@ -380,8 +473,6 @@ class FruitBatch(models.Model):
             return max(remaining, 0)
         return 0
 
-# Update Product model to include fruit relationships (add these to existing Product model)
-# Note: We've already added these fields to the Product model above
 
 class FruitQualityReading(models.Model):
     """Sensor readings and quality predictions for fruit batches"""
@@ -427,6 +518,7 @@ class FruitQualityReading(models.Model):
     def __str__(self):
         return f"{self.fruit_batch.batch_number} - {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
 
+
 # ==================== STORAGE & SENSOR MODELS ====================
 
 class StorageLocation(models.Model):
@@ -447,6 +539,7 @@ class StorageLocation(models.Model):
     @property
     def available_capacity(self):
         return self.capacity - self.current_occupancy
+
 
 class RealTimeSensorData(models.Model):
     """Real-time sensor data model"""
@@ -484,6 +577,7 @@ class RealTimeSensorData(models.Model):
     def __str__(self):
         return f"{self.sensor_type} - {self.value}{self.unit}"
 
+
 # ==================== AI & DATASET MODELS ====================
 
 class ProductDataset(models.Model):
@@ -508,6 +602,7 @@ class ProductDataset(models.Model):
     def __str__(self):
         return f"{self.name} ({self.get_dataset_type_display()})"
 
+
 class TrainedModel(models.Model):
     """Trained AI models"""
     MODEL_TYPES = [
@@ -528,6 +623,7 @@ class TrainedModel(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.get_model_type_display()}"
+
 
 # ==================== ALERT & NOTIFICATION MODELS ====================
 
@@ -565,6 +661,7 @@ class ProductAlert(models.Model):
     def __str__(self):
         return f"{self.get_alert_type_display()} - {self.product.name}"
 
+
 class Notification(models.Model):
     """User notifications"""
     NOTIFICATION_TYPES = [
@@ -588,6 +685,7 @@ class Notification(models.Model):
     
     def __str__(self):
         return f"{self.title} - {self.user.username}"
+
 
 # ==================== PAYMENT MODELS ====================
 
@@ -675,6 +773,7 @@ class Payment(models.Model):
     def is_successful(self):
         return self.status == 'completed'
 
+
 class PaymentGatewaySettings(models.Model):
     """Enhanced payment gateway configuration"""
     GATEWAY_CHOICES = [
@@ -726,6 +825,7 @@ class PaymentGatewaySettings(models.Model):
     def __str__(self):
         return f"{self.get_gateway_display()} Settings"
 
+
 class CurrencyExchangeRate(models.Model):
     """Currency exchange rates"""
     base_currency = models.CharField(max_length=3)
@@ -738,6 +838,7 @@ class CurrencyExchangeRate(models.Model):
     
     def __str__(self):
         return f"{self.base_currency}/{self.target_currency}: {self.exchange_rate}"
+
 
 # ==================== SITE CONTENT MODELS ====================
 
@@ -795,6 +896,7 @@ class SiteInfo(models.Model):
             return
         super().save(*args, **kwargs)
 
+
 class Service(models.Model):
     """Services offered by Bika"""
     name = models.CharField(max_length=200)
@@ -816,6 +918,7 @@ class Service(models.Model):
     def get_absolute_url(self):
         return reverse('bika:service_detail', kwargs={'slug': self.slug})
 
+
 class Testimonial(models.Model):
     """Customer testimonials"""
     name = models.CharField(max_length=200)
@@ -833,6 +936,7 @@ class Testimonial(models.Model):
     
     def __str__(self):
         return f"Testimonial from {self.name}"
+
 
 class ContactMessage(models.Model):
     """Contact form messages"""
@@ -863,6 +967,7 @@ class ContactMessage(models.Model):
         self.status = 'replied'
         self.replied_at = timezone.now()
         self.save()
+
 
 class FAQ(models.Model):
     """Frequently Asked Questions"""

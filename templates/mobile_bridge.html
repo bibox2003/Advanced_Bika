@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Mobile Bridge</title>
+</head>
+<body>
+  <p>Completing mobile sign-in…</p>
+
+  <script>
+    (function () {
+      const payload = {
+        type: "AUTH_TOKENS",
+        access: "{{ access_token|escapejs }}",
+        refresh: "{{ refresh_token|escapejs }}"
+      };
+
+      // Send to Flutter WebView JavaScript channel
+      if (window.AuthBridge && window.AuthBridge.postMessage) {
+        window.AuthBridge.postMessage(JSON.stringify(payload));
+      }
+
+      // Optional: fallback text for debugging
+      console.log("Bridge payload sent to Flutter.");
+    })();
+  </script>
+</body>
+</html>
