@@ -17,14 +17,13 @@ urlpatterns = [
     path("admin/activate-model/<int:model_id>/", views.activate_model, name="activate_model"),
     path("admin/product-ai-insights-overview/", views.product_ai_insights_overview, name="product_ai_insights_overview"),
 
-    # ==================== API ROUTES FOR FLUTTER ====================
-    path("api/", include("bika.api_urls")),
-
     # ==================== DJANGO ADMIN ====================
     path("admin/", admin.site.urls),
 
-    # ==================== OTHER APP URLS ====================
+    # ==================== APP URLS (includes api/v1 inside bika.urls) ====================
     path("", include("bika.urls")),
+
+    # Optional auth routes
     path("accounts/", include("django.contrib.auth.urls")),
 ]
 
@@ -37,7 +36,7 @@ admin.site.index_title = "Welcome to Bika Admin Portal"
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-# Error handlers (single set only)
+# Error handlers
 handler404 = "bika.views.handler404"
 handler500 = "bika.views.handler500"
 handler403 = "bika.views.handler403"

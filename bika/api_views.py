@@ -1,8 +1,11 @@
+# Advanced_Bika/bika/api_views.py
+
 from decimal import Decimal
+
+from django.db.models import Q, Sum, F
+from django.db import transaction
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
-from django.db import transaction
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,12 +15,10 @@ from rest_framework import generics, status
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Product, Cart, Order, OrderItem, Payment
-from .api_serializers import (
-    ProductListSerializer,
-    ProductDetailSerializer,
-    CartSerializer,
-)
+from .api_serializers import ProductListSerializer, ProductDetailSerializer, CartSerializer
+from .product_write_serializers import ProductWriteSerializer   # ✅ IMPORTANT
 from .checkout_serializers import CreateOrderSerializer
+from .orders_serializers import OrderListSerializer, OrderDetailSerializer
 
 
 # -----------------------------------------------------------------------------
@@ -26,7 +27,7 @@ from .checkout_serializers import CreateOrderSerializer
 def _product_visibility_queryset_for_user(user):
     """
     Product visibility rules:
-    - Admin/superuser sees all active products
+    - superuser/admin sees all active products
     - Others:
       * own products always visible
       * private => creator only
@@ -39,7 +40,11 @@ def _product_visibility_queryset_for_user(user):
         .prefetch_related("images")
     )
 
-    if getattr(user, "is_superuser", False) or getattr(user, "user_type", "") == "admin":
+    if (
+        getattr(user, "is_superuser", False)
+        or getattr(user, "user_type", "") == "admin"
+        or getattr(user, "role", "") == "admin"
+    ):
         return base.order_by("-created_at")
 
     user_unit_id = getattr(user, "unit_id", None)
@@ -58,15 +63,9 @@ def _product_visibility_queryset_for_user(user):
 
 
 def _can_adjust_stock(user, product):
-    """
-    Who can adjust stock:
-    - superuser/admin
-    - creator of product
-    - vendor owner of product
-    """
     if getattr(user, "is_superuser", False):
         return True
-    if getattr(user, "user_type", "") == "admin":
+    if getattr(user, "user_type", "") == "admin" or getattr(user, "role", "") == "admin":
         return True
     if product.created_by_id == user.id:
         return True
@@ -98,6 +97,59 @@ class MeView(APIView):
 
 
 # -----------------------------------------------------------------------------
+# Dashboard Summary
+# -----------------------------------------------------------------------------
+class DashboardSummaryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        visible_products = _product_visibility_queryset_for_user(request.user)
+
+        total_count = visible_products.count()
+        active_count = visible_products.filter(status="active").count()
+        out_of_stock_count = visible_products.filter(status="out_of_stock").count()
+
+        low_stock_count = visible_products.filter(
+            track_inventory=True,
+            stock_quantity__gt=0,
+            stock_quantity__lte=F("low_stock_threshold"),
+        ).count()
+
+        cart_qs = Cart.objects.filter(user=request.user).select_related("product")
+        cart_items_count = cart_qs.count()
+        cart_total_qty = cart_qs.aggregate(total_qty=Sum("quantity"))["total_qty"] or 0
+
+        cart_total_value = Decimal("0.00")
+        for item in cart_qs:
+            cart_total_value += Decimal(str(item.product.final_price)) * Decimal(str(item.quantity))
+
+        recent_products = visible_products.order_by("-created_at")[:5]
+        recent_data = [{
+            "id": p.id,
+            "name": p.name,
+            "stock_quantity": p.stock_quantity,
+            "status": p.status,
+            "price": str(p.final_price),
+            "created_at": p.created_at,
+        } for p in recent_products]
+
+        return Response({
+            "products": {
+                "total": total_count,
+                "active": active_count,
+                "out_of_stock": out_of_stock_count,
+                "low_stock": low_stock_count,
+            },
+            "cart": {
+                "items_count": cart_items_count,
+                "total_quantity": cart_total_qty,
+                "total_value": str(cart_total_value),
+            },
+            "recent_products": recent_data,
+        }, status=status.HTTP_200_OK)
+
+
+# -----------------------------------------------------------------------------
 # Products
 # -----------------------------------------------------------------------------
 class ProductListView(generics.ListAPIView):
@@ -106,7 +158,6 @@ class ProductListView(generics.ListAPIView):
 
     def get_queryset(self):
         mine_only = self.request.query_params.get("mine") == "1"
-
         if mine_only:
             return (
                 Product.objects.filter(status="active", created_by=self.request.user)
@@ -114,7 +165,6 @@ class ProductListView(generics.ListAPIView):
                 .prefetch_related("images")
                 .order_by("-created_at")
             )
-
         return _product_visibility_queryset_for_user(self.request.user)
 
     def get_serializer_context(self):
@@ -137,11 +187,72 @@ class ProductDetailView(generics.RetrieveAPIView):
         return ctx
 
 
+class ProductCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # ✅ Use ProductWriteSerializer for create
+        serializer = ProductWriteSerializer(data=request.data, context={"request": request})
+        if serializer.is_valid():
+            product = serializer.save(created_by=request.user)
+            return Response(
+                ProductDetailSerializer(product, context={"request": request}).data,
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProductUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, id):
+        try:
+            product = Product.objects.select_related("vendor", "created_by").get(id=id)
+        except Product.DoesNotExist:
+            return Response({"detail": "Product not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if not _can_adjust_stock(request.user, product):
+            return Response(
+                {"detail": "You do not have permission to edit this product."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # ✅ Use ProductWriteSerializer for update
+        serializer = ProductWriteSerializer(
+            product,
+            data=request.data,
+            partial=True,
+            context={"request": request},
+        )
+        if serializer.is_valid():
+            updated = serializer.save()
+            return Response(
+                ProductDetailSerializer(updated, context={"request": request}).data,
+                status=status.HTTP_200_OK
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProductDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, id):
+        try:
+            product = Product.objects.select_related("vendor", "created_by").get(id=id)
+        except Product.DoesNotExist:
+            return Response({"detail": "Product not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if not _can_adjust_stock(request.user, product):
+            return Response(
+                {"detail": "You do not have permission to delete this product."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        product.delete()
+        return Response({"detail": "Product deleted successfully."}, status=status.HTTP_200_OK)
+
+
 class ProductStockAdjustView(APIView):
-    """
-    PATCH /api/v1/products/<id>/stock/
-    Body: {"delta": 1} or {"delta": -2}
-    """
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, id):
@@ -153,10 +264,10 @@ class ProductStockAdjustView(APIView):
         if not _can_adjust_stock(request.user, product):
             return Response(
                 {"detail": "You do not have permission to adjust stock for this product."},
-                status=status.HTTP_403_FORBIDDEN,
+                status=status.HTTP_403_FORBIDDEN
             )
 
-        delta = request.data.get("delta", None)
+        delta = request.data.get("delta")
         if delta is None:
             return Response({"detail": "delta is required."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -172,7 +283,7 @@ class ProductStockAdjustView(APIView):
         if product.track_inventory and new_qty < 0:
             return Response(
                 {"detail": "Stock cannot go below zero.", "current_stock": product.stock_quantity},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         product.stock_quantity = max(new_qty, 0) if product.track_inventory else new_qty
@@ -238,7 +349,10 @@ class AddToCartView(APIView):
         try:
             product = visible_qs.get(id=product_id)
         except Product.DoesNotExist:
-            return Response({"detail": "Product not found or not visible to your account."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Product not found or not visible to your account."},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
         cart_item, created = Cart.objects.get_or_create(
             user=request.user,
@@ -301,11 +415,7 @@ class CheckoutPreviewView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        cart_items = (
-            Cart.objects.filter(user=request.user)
-            .select_related("product")
-            .order_by("-added_at")
-        )
+        cart_items = Cart.objects.filter(user=request.user).select_related("product").order_by("-added_at")
 
         items = []
         subtotal = Decimal("0.00")
@@ -313,7 +423,7 @@ class CheckoutPreviewView(APIView):
 
         for c in cart_items:
             unit_price = Decimal(str(c.product.final_price))
-            line_total = unit_price * c.quantity
+            line_total = unit_price * Decimal(str(c.quantity))
             subtotal += line_total
             total_items += c.quantity
 
@@ -322,13 +432,13 @@ class CheckoutPreviewView(APIView):
                 "product_id": c.product_id,
                 "product_name": c.product.name,
                 "quantity": c.quantity,
-                "unit_price": unit_price,
-                "total_price": line_total,
+                "unit_price": str(unit_price),
+                "total_price": str(line_total),
             })
 
         return Response({
             "items": items,
-            "subtotal": subtotal,
+            "subtotal": str(subtotal),
             "total_items": total_items,
         }, status=status.HTTP_200_OK)
 
@@ -342,33 +452,18 @@ class CheckoutCreateOrderView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        cart_items = (
-            Cart.objects.select_related("product")
-            .filter(user=request.user)
-            .order_by("-added_at")
-        )
-
+        cart_items = Cart.objects.select_related("product").filter(user=request.user).order_by("-added_at")
         if not cart_items.exists():
-            return Response(
-                {"detail": "Cart is empty."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"detail": "Cart is empty."}, status=status.HTTP_400_BAD_REQUEST)
 
         subtotal = Decimal("0.00")
         for c in cart_items:
-            if c.quantity < 1:
-                return Response(
-                    {"detail": f"Invalid quantity for {c.product.name}."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
             if c.product.track_inventory and c.quantity > c.product.stock_quantity:
                 return Response(
                     {"detail": f"Insufficient stock for {c.product.name}. Available: {c.product.stock_quantity}"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-
-            subtotal += Decimal(str(c.product.final_price)) * c.quantity
+            subtotal += Decimal(str(c.product.final_price)) * Decimal(str(c.quantity))
 
         shipping_address = data["shipping_address"]
         billing_address = data.get("billing_address") or shipping_address
@@ -387,13 +482,7 @@ class CheckoutCreateOrderView(APIView):
 
         for c in cart_items:
             unit_price = Decimal(str(c.product.final_price))
-
-            OrderItem.objects.create(
-                order=order,
-                product=c.product,
-                quantity=c.quantity,
-                price=unit_price,
-            )
+            OrderItem.objects.create(order=order, product=c.product, quantity=c.quantity, price=unit_price)
 
             if c.product.track_inventory:
                 c.product.stock_quantity = max(c.product.stock_quantity - c.quantity, 0)
@@ -402,7 +491,6 @@ class CheckoutCreateOrderView(APIView):
                 c.product.save(update_fields=["stock_quantity", "status", "updated_at"])
 
         payment_status = "completed" if payment_method == "bank_transfer" else "pending"
-
         payment = Payment.objects.create(
             order=order,
             payment_method=payment_method,
@@ -435,6 +523,26 @@ class CheckoutCreateOrderView(APIView):
 
 
 # -----------------------------------------------------------------------------
+# Orders
+# -----------------------------------------------------------------------------
+class OrderListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = OrderListSerializer
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user).prefetch_related("items").order_by("-created_at")
+
+
+class OrderDetailView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = OrderDetailSerializer
+    lookup_field = "id"
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user).prefetch_related("items", "items__product", "payments")
+
+
+# -----------------------------------------------------------------------------
 # Session -> JWT
 # -----------------------------------------------------------------------------
 @api_view(["POST"])
@@ -455,8 +563,7 @@ def session_to_jwt(request):
 @login_required(login_url="/login/")
 def mobile_bridge(request):
     refresh = RefreshToken.for_user(request.user)
-    access = str(refresh.access_token)
     return render(request, "mobile_bridge.html", {
-        "access_token": access,
+        "access_token": str(refresh.access_token),
         "refresh_token": str(refresh),
     })

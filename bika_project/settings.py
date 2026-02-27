@@ -16,27 +16,33 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ------------------------------------------------------------------------------
 SECRET_KEY = os.getenv(
     "DJANGO_SECRET_KEY",
-    "django-insecure-bika-project-secret-key-2025-change-this-in-production"
+    "django-insecure-bika-project-secret-key-2025-change-this-in-production",
 )
 
 DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
 
+# Hosts
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     "0.0.0.0",
-    "10.0.2.2",
-    "172.16.23.194",
-]        # Android emulator host alias
+    "10.0.2.2",          # Android emulator -> host machine
+    "172.16.18.63",     # your LAN IP (example)
+    "172.16.20.204",     # another LAN IP seen in your error logs
+]
 
+# Optional: allow adding extra hosts via env (comma-separated)
+_extra_hosts = os.getenv("DJANGO_ALLOWED_HOSTS", "").strip()
+if _extra_hosts:
+    ALLOWED_HOSTS += [h.strip() for h in _extra_hosts.split(",") if h.strip()]
 
 # ------------------------------------------------------------------------------
 # Application definition
 # ------------------------------------------------------------------------------
 INSTALLED_APPS = [
     # Third-party apps
-    "rest_framework",
     "corsheaders",
+    "rest_framework",
 
     # Django default apps
     "django.contrib.admin",
@@ -54,15 +60,19 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     # CORS must come high
     "corsheaders.middleware.CorsMiddleware",
+
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# ✅ Keep project package casing consistent with your folder name.
+# If your project folder is actually "Bika_Project", keep these as-is.
 ROOT_URLCONF = "Bika_Project.urls"
 WSGI_APPLICATION = "Bika_Project.wsgi.application"
 
@@ -92,8 +102,8 @@ TEMPLATES = [
 # ------------------------------------------------------------------------------
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": os.getenv("DJANGO_DB_ENGINE", "django.db.backends.sqlite3"),
+        "NAME": os.getenv("DJANGO_DB_NAME", str(BASE_DIR / "db.sqlite3")),
     }
 }
 
@@ -101,26 +111,20 @@ DATABASES = {
 # Password validation
 # ------------------------------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
         "OPTIONS": {"min_length": 8},
     },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 # ------------------------------------------------------------------------------
 # Internationalization
 # ------------------------------------------------------------------------------
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+TIME_ZONE = os.getenv("DJANGO_TIME_ZONE", "UTC")
 USE_I18N = True
 USE_TZ = True
 
@@ -160,16 +164,17 @@ LOGOUT_REDIRECT_URL = "bika:home"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
+        # (optional) allow session auth for web pages:
+        # "rest_framework.authentication.SessionAuthentication",
     ),
-    # Default protected APIs; if needed, override per-view with AllowAny
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("JWT_ACCESS_MINUTES", "30"))),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.getenv("JWT_REFRESH_DAYS", "7"))),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": False,
     "AUTH_HEADER_TYPES": ("Bearer",),
@@ -179,10 +184,8 @@ SIMPLE_JWT = {
 # CORS / CSRF
 # ------------------------------------------------------------------------------
 if DEBUG:
-    # Dev only (mobile emulator + local testing)
     CORS_ALLOW_ALL_ORIGINS = True
 else:
-    # Lock down in production
     CORS_ALLOWED_ORIGINS = [
         # "https://yourdomain.com",
         # "https://app.yourdomain.com",
@@ -193,19 +196,20 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8000",
     "http://0.0.0.0:8000",
     "http://10.0.2.2:8000",
-    "http://172.16.23.194:8000",
+    "http://172.16.18.63:8000",
+    "http://172.16.20.204:8000",
 ]
 
 # ------------------------------------------------------------------------------
 # Email Configuration
 # ------------------------------------------------------------------------------
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
+EMAIL_BACKEND = os.getenv("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "your_email@example.com")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "your_app_password_here")
-DEFAULT_FROM_EMAIL = "Bika <noreply@bika.com>"
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Bika <noreply@bika.com>")
 
 # ------------------------------------------------------------------------------
 # Session Configuration
@@ -224,6 +228,7 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_SSL_REDIRECT = True
     CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
     X_FRAME_OPTIONS = "DENY"
 
 # ------------------------------------------------------------------------------
@@ -239,8 +244,8 @@ CACHES = {
 # ------------------------------------------------------------------------------
 # File Upload Settings
 # ------------------------------------------------------------------------------
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 
 # ------------------------------------------------------------------------------
 # Bika Application Specific Settings
@@ -253,30 +258,27 @@ BIKA_SETTINGS = {
     "SALES_EMAIL": "sales@bika.com",
     "ADMIN_EMAIL": "admin@bika.com",
 
-    # Product Settings
     "MAX_PRODUCT_IMAGES": 10,
     "DEFAULT_STOCK_THRESHOLD": 5,
-    "DEFAULT_TAX_RATE": 0.18,  # 18% VAT
+    "DEFAULT_TAX_RATE": 0.18,
 
-    # Order Settings
     "SHIPPING_COST": 5000,
     "FREE_SHIPPING_THRESHOLD": 100000,
     "ORDER_PROCESSING_DAYS": 1,
     "DELIVERY_ESTIMATE_DAYS": 3,
 
-    # Fruit Quality Monitoring
-    "DEFAULT_FRUIT_SHELF_LIFE": 7,  # days
+    "DEFAULT_FRUIT_SHELF_LIFE": 7,
     "QUALITY_CHECK_INTERVAL_HOURS": 24,
-    "CRITICAL_TEMP_THRESHOLD": 10,  # °C
-    "CRITICAL_HUMIDITY_THRESHOLD": 95,  # %
+    "CRITICAL_TEMP_THRESHOLD": 10,
+    "CRITICAL_HUMIDITY_THRESHOLD": 95,
 }
 
 # ------------------------------------------------------------------------------
 # Bika AI Settings
 # ------------------------------------------------------------------------------
 BIKA_AI_SERVICE_TYPE = "enhanced"
-BIKA_AI_MODEL_DIR = os.path.join(MEDIA_ROOT, "fruit_models")
-BIKA_AI_CACHE_TIMEOUT = 3600  # 1 hour
+BIKA_AI_MODEL_DIR = MEDIA_ROOT / "fruit_models"
+BIKA_AI_CACHE_TIMEOUT = 3600
 BIKA_AI_MAX_PREDICTIONS_PER_BATCH = 1000
 
 # ------------------------------------------------------------------------------
@@ -302,15 +304,7 @@ required_dirs = [
 ]
 
 for directory in required_dirs:
-    os.makedirs(directory, exist_ok=True)
-
-# ------------------------------------------------------------------------------
-# Custom error handlers
-# ------------------------------------------------------------------------------
-handler404 = "bika.views.handler404"
-handler500 = "bika.views.handler500"
-handler403 = "bika.views.handler403"
-handler400 = "bika.views.handler400"
+    directory.mkdir(parents=True, exist_ok=True)
 
 # ------------------------------------------------------------------------------
 # Optional apps (add only if installed)

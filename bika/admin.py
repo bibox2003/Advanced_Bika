@@ -11,6 +11,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.urls import reverse
 from .models import *
+from django.contrib.admin.sites import NotRegistered
 
 # ==================== DASHBOARD VIEW ====================
 
@@ -370,14 +371,21 @@ class ProductAdmin(admin.ModelAdmin):
         self.message_user(request, f"{updated} products unmarked as featured.")
     unmark_featured.short_description = "Remove featured status"
 
+# Safely unregister ProductCategory if it was already registered somewhere above
+try:
+    admin.site.unregister(ProductCategory)
+except NotRegistered:
+    pass
+
+
 @admin.register(ProductCategory)
 class ProductCategoryAdmin(admin.ModelAdmin):
     list_display = ['name', 'slug', 'product_count', 'is_active', 'display_order']
     list_filter = ['is_active', 'parent']
     search_fields = ['name', 'description']
-    list_editable = ['display_order', 'is_active']  # These are in list_display
+    list_editable = ['display_order', 'is_active']
     prepopulated_fields = {'slug': ('name',)}
-    
+
     def product_count(self, obj):
         return obj.products.count()
     product_count.short_description = 'Products'
@@ -851,3 +859,4 @@ admin.site.get_urls = custom_get_urls
 admin.site.site_header = "Bika Admin Dashboard"
 admin.site.site_title = "Bika Admin"
 admin.site.index_title = "Welcome to Bika Administration"
+

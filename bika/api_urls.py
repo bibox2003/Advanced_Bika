@@ -1,9 +1,13 @@
+# bika/api_urls.py
 from django.urls import path
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .api_views import (
     MeView,
+    DashboardSummaryView,
     ProductListView,
     ProductDetailView,
+    ProductCreateView,
+    ProductUpdateView,
+    ProductDeleteView,
     ProductStockAdjustView,
     CartListView,
     AddToCartView,
@@ -11,32 +15,42 @@ from .api_views import (
     RemoveCartItemView,
     CheckoutPreviewView,
     CheckoutCreateOrderView,
+    OrderListView,
+    OrderDetailView,
     session_to_jwt,
+    mobile_bridge,
 )
 
+app_name = "bika_api"
+
 urlpatterns = [
-    # Auth
-    path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
-    path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    # ==================== USER / DASHBOARD ====================
+    path("me/", MeView.as_view(), name="api_me"),
+    path("dashboard/summary/", DashboardSummaryView.as_view(), name="api_dashboard_summary"),
 
-    # Session -> JWT bridge
-    path("v1/session-to-jwt/", session_to_jwt, name="session_to_jwt"),
+    # ==================== PRODUCTS ====================
+    path("products/", ProductListView.as_view(), name="api_products_list"),                 # GET
+    path("products/create/", ProductCreateView.as_view(), name="api_products_create"),      # POST
+    path("products/<int:id>/", ProductDetailView.as_view(), name="api_products_detail"),    # GET
+    path("products/<int:id>/update/", ProductUpdateView.as_view(), name="api_products_update"),  # PATCH/PUT
+    path("products/<int:id>/delete/", ProductDeleteView.as_view(), name="api_products_delete"),  # DELETE
+    path("products/<int:id>/stock/", ProductStockAdjustView.as_view(), name="api_products_stock"),  # PATCH
 
-    # User
-    path("v1/me/", MeView.as_view(), name="me"),
+    # ==================== CART ====================
+    path("cart/", CartListView.as_view(), name="api_cart_list"),                            # GET
+    path("cart/add/", AddToCartView.as_view(), name="api_cart_add"),                        # POST
+    path("cart/<int:item_id>/", UpdateCartItemView.as_view(), name="api_cart_update"),      # PATCH/PUT
+    path("cart/<int:item_id>/remove/", RemoveCartItemView.as_view(), name="api_cart_remove"),  # DELETE/POST
 
-    # Products
-    path("v1/products/", ProductListView.as_view(), name="products"),
-    path("v1/products/<int:id>/", ProductDetailView.as_view(), name="product_detail"),
-    path("v1/products/<int:id>/stock/", ProductStockAdjustView.as_view(), name="product_stock_adjust"),
+    # ==================== CHECKOUT ====================
+    path("checkout/preview/", CheckoutPreviewView.as_view(), name="api_checkout_preview"),
+    path("checkout/create-order/", CheckoutCreateOrderView.as_view(), name="api_checkout_create_order"),
 
-    # Cart
-    path("v1/cart/", CartListView.as_view(), name="cart_list"),
-    path("v1/cart/add/", AddToCartView.as_view(), name="cart_add"),
-    path("v1/cart/<int:item_id>/", UpdateCartItemView.as_view(), name="cart_update"),
-    path("v1/cart/<int:item_id>/remove/", RemoveCartItemView.as_view(), name="cart_remove"),
+    # ==================== ORDERS ====================
+    path("orders/", OrderListView.as_view(), name="api_orders_list"),
+    path("orders/<int:id>/", OrderDetailView.as_view(), name="api_orders_detail"),
 
-    # Checkout
-    path("v1/checkout/preview/", CheckoutPreviewView.as_view(), name="checkout_preview"),
-    path("v1/checkout/create-order/", CheckoutCreateOrderView.as_view(), name="checkout_create_order"),
+    # ==================== SESSION / MOBILE BRIDGE ====================
+    path("session-to-jwt/", session_to_jwt, name="api_session_to_jwt"),
+    path("mobile-bridge/", mobile_bridge, name="api_mobile_bridge"),
 ]

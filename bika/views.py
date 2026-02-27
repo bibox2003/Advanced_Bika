@@ -6,8 +6,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from bika.services.ai_service import enhanced_ai_service
+fruit_ai_service = enhanced_ai_service
 import joblib
-from sklearn.preprocessing import LabelEncoder
 from django.core.files.storage import default_storage
 import tempfile
 from django.shortcuts import render, redirect, get_object_or_404
@@ -27,6 +27,22 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.utils import timezone
 from django.urls import reverse
 from django.db import transaction
+
+# ML imports for training utilities
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+# XGBoost (optional)
+try:
+    from xgboost import XGBClassifier
+    XGBOOST_AVAILABLE = True
+except ImportError:
+    XGBClassifier = None
+    XGBOOST_AVAILABLE = False
 
 # Import models
 from .models import (
@@ -1799,8 +1815,6 @@ def add_to_cart(request, product_id):
 
 @login_required
 @require_POST
-@login_required
-@require_POST
 def update_cart(request, product_id):
     """Update cart item quantity"""
     from decimal import Decimal
@@ -1968,8 +1982,6 @@ def checkout(request):
     
     return render(request, 'bika/pages/checkout.html', context)
 
-@login_required
-@require_POST
 @login_required
 @require_POST
 def place_order(request):
@@ -2980,7 +2992,7 @@ def train_five_models_view(request):
             
             # Save best model to database
             if results['best_model']:
-                save_model_to_database(results['best_model'], results)
+                save_model_to_database(results)
             
             # Store results in session for display
             request.session['training_results'] = results
@@ -3326,7 +3338,7 @@ def train_five_models_view(request):
             
             # Save best model to database
             if results['best_model']:
-                save_model_to_database(results['best_model'], results)
+                save_model_to_database(results)
             
             # Store results in session for display
             request.session['training_results'] = results
@@ -3766,3 +3778,301 @@ def analyze_csv(request):
             os.unlink(tmp_path)
     
     return JsonResponse({'success': False, 'error': 'No file uploaded'})
+# ==================== DRF VIEWSETS (API) ====================
+
+from django.db.models import Sum
+from rest_framework import viewsets, permissions, filters, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+# ✅ Real models
+from .models import Product, ProductCategory, CustomUser, Cart
+
+# ✅ READ serializers from api_serializers
+from .api_serializers import (
+    ProductListSerializer,
+    ProductDetailSerializer,
+    ProductCategorySerializer,
+    VendorSerializer,
+    CartSerializer,
+    StockAdjustSerializer,
+)
+
+# ✅ WRITE serializer from dedicated file (important fix)
+from .product_write_serializers import ProductWriteSerializer
+
+
+class IsAuthenticatedOrReadOnlyForNow(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return bool(request.user and request.user.is_authenticated)
+
+
+# -----------------------------------------------------------------------------
+# DASHBOARD API (for Flutter Home overview)
+# Endpoint: /api/v1/dashboard/summary/
+# -----------------------------------------------------------------------------
+class DashboardSummaryAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        # If vendor, scope to their products; if staff/admin, all products
+        if getattr(user, "is_staff", False):
+            product_qs = Product.objects.all()
+        elif getattr(user, "user_type", None) == "vendor":
+            product_qs = Product.objects.filter(vendor=user)
+        else:
+            # customer or others -> show global counts (or set to 0 if you prefer)
+            product_qs = Product.objects.all()
+
+        cart_qs = Cart.objects.filter(user=user)
+
+        subtotal = 0
+        for item in cart_qs.select_related("product"):
+            try:
+                price = getattr(item.product, "final_price", None) or item.product.price or 0
+                subtotal += float(price) * int(item.quantity or 0)
+            except Exception:
+                pass
+
+        data = {
+            "total_products": product_qs.count(),
+            "active_products": product_qs.filter(status="active").count(),
+            "draft_products": product_qs.filter(status="draft").count(),
+            "low_stock_products": product_qs.filter(
+                track_inventory=True,
+                stock_quantity__gt=0,
+                stock_quantity__lte=5,
+            ).count(),
+            "out_of_stock_products": product_qs.filter(
+                track_inventory=True,
+                stock_quantity=0,
+            ).count(),
+            "cart_items": cart_qs.count(),
+            "cart_quantity_total": sum(int(i.quantity or 0) for i in cart_qs),
+            "cart_subtotal": round(subtotal, 2),
+        }
+        return Response(data, status=status.HTTP_200_OK)
+
+
+# -----------------------------------------------------------------------------
+# PRODUCTS API
+# -----------------------------------------------------------------------------
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.select_related("category", "vendor").all()
+    permission_classes = [IsAuthenticatedOrReadOnlyForNow]
+
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["name", "sku", "slug", "barcode"]
+    ordering_fields = ["created_at", "updated_at", "name", "price", "stock_quantity"]
+    ordering = ["-created_at"]
+
+    def get_serializer_class(self):
+        # Write serializer for create/update, detail serializer for retrieve, list serializer for list
+        if self.action in ["create", "update", "partial_update"]:
+            return ProductWriteSerializer
+        if self.action == "retrieve":
+            return ProductDetailSerializer
+        return ProductListSerializer
+
+    def get_queryset(self):
+        qs = Product.objects.select_related("category", "vendor").all()
+
+        # Optional query params
+        status_param = self.request.query_params.get("status")
+        if status_param:
+            qs = qs.filter(status=status_param)
+
+        category_id = self.request.query_params.get("category")
+        if category_id:
+            qs = qs.filter(category_id=category_id)
+
+        vendor_id = self.request.query_params.get("vendor")
+        if vendor_id:
+            qs = qs.filter(vendor_id=vendor_id)
+
+        # Optional: show only active by default for non-staff GET
+        # if self.request.method == "GET" and not (self.request.user and self.request.user.is_staff):
+        #     qs = qs.filter(status="active")
+
+        return qs
+
+    def create(self, request, *args, **kwargs):
+        """
+        Explicit create to make debugging easier and return clean validation errors.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+
+        # Return read serializer response after create
+        product = serializer.instance
+        read_data = ProductDetailSerializer(product, context=self.get_serializer_context()).data
+        headers = self.get_success_headers(read_data)
+        return Response(read_data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+    @action(detail=False, methods=["get"])
+    def summary(self, request):
+        """
+        Product summary endpoint:
+        /api/v1/products/summary/
+        """
+        qs = self.get_queryset()
+        return Response(
+            {
+                "total_products": qs.count(),
+                "active_products": qs.filter(status="active").count(),
+                "inactive_products": qs.exclude(status="active").count(),
+                "low_stock_products": qs.filter(
+                    status="active",
+                    track_inventory=True,
+                    stock_quantity__lte=5,
+                ).count(),
+            }
+        )
+
+    @action(detail=True, methods=["patch"], url_path="stock")
+    def adjust_stock(self, request, pk=None):
+        """
+        PATCH /api/v1/products/<id>/stock/
+        body: {"delta": 1} or {"delta": -1}
+        """
+        product = self.get_object()
+        serializer = StockAdjustSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        delta = serializer.validated_data["delta"]
+        new_qty = int(product.stock_quantity or 0) + int(delta)
+
+        if new_qty < 0:
+            return Response(
+                {"detail": "Stock cannot go below zero."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        product.stock_quantity = new_qty
+        product.save(update_fields=["stock_quantity", "updated_at"])
+
+        return Response(
+            {
+                "id": product.id,
+                "stock_quantity": product.stock_quantity,
+                "delta": delta,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+# -----------------------------------------------------------------------------
+# CART API (for Flutter Cart tab)
+# Endpoints:
+#   GET    /api/v1/cart/
+#   POST   /api/v1/cart/           body: {"product_id": 1, "quantity": 2}
+#   PATCH  /api/v1/cart/<id>/      body: {"quantity": 3}
+#   DELETE /api/v1/cart/<id>/
+# -----------------------------------------------------------------------------
+class CartViewSet(viewsets.ModelViewSet):
+    serializer_class = CartSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+
+    def get_queryset(self):
+        return Cart.objects.filter(user=self.request.user).select_related("product").order_by("-added_at")
+
+    def create(self, request, *args, **kwargs):
+        product_id = request.data.get("product_id") or request.data.get("product")
+        quantity = request.data.get("quantity", 1)
+
+        try:
+            product_id = int(product_id)
+            quantity = int(quantity)
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "product_id and quantity must be valid integers."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if quantity < 1:
+            return Response(
+                {"detail": "quantity must be at least 1."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            product = Product.objects.get(pk=product_id)
+        except Product.DoesNotExist:
+            return Response({"detail": "Product not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Stock check
+        if getattr(product, "track_inventory", False) and int(product.stock_quantity or 0) < quantity:
+            return Response(
+                {"detail": f"Only {product.stock_quantity} item(s) available."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        cart_item, created = Cart.objects.get_or_create(
+            user=request.user,
+            product=product,
+            defaults={"quantity": quantity},
+        )
+
+        if not created:
+            new_qty = int(cart_item.quantity or 0) + quantity
+            if getattr(product, "track_inventory", False) and int(product.stock_quantity or 0) < new_qty:
+                return Response(
+                    {"detail": f"Only {product.stock_quantity} item(s) available."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            cart_item.quantity = new_qty
+            cart_item.save(update_fields=["quantity", "updated_at"])
+
+        data = CartSerializer(cart_item, context=self.get_serializer_context()).data
+        return Response(data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+    def partial_update(self, request, *args, **kwargs):
+        cart_item = self.get_object()
+        quantity = request.data.get("quantity")
+
+        try:
+            quantity = int(quantity)
+        except (TypeError, ValueError):
+            return Response({"detail": "quantity must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if quantity < 1:
+            cart_item.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        product = cart_item.product
+        if getattr(product, "track_inventory", False) and int(product.stock_quantity or 0) < quantity:
+            return Response(
+                {"detail": f"Only {product.stock_quantity} item(s) available."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        cart_item.quantity = quantity
+        cart_item.save(update_fields=["quantity", "updated_at"])
+
+        data = CartSerializer(cart_item, context=self.get_serializer_context()).data
+        return Response(data, status=status.HTTP_200_OK)
+
+
+# -----------------------------------------------------------------------------
+# SUPPORTING READ-ONLY APIs
+# -----------------------------------------------------------------------------
+class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ProductCategory.objects.filter(is_active=True).order_by("name")
+    serializer_class = ProductCategorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class VendorViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = CustomUser.objects.filter(user_type="vendor", is_active=True).order_by("username")
+    serializer_class = VendorSerializer
+    permission_classes = [permissions.IsAuthenticated]
